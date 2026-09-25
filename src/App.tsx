@@ -93,11 +93,18 @@ export default function App() {
     localStorage.setItem('wadeal_business_context', newContext);
   };
 
-  const handleLicenseActivated = (key: string, plan: 'ltd' | 'monthly') => {
+  const handleLicenseActivated = (key: string, plan: 'starter' | 'annual' | 'monthly' | 'ltd') => {
     setLicenseKey(key);
-    setIsPro(true);
+    if (plan === 'starter') {
+      setIsPro(false);
+      setCreditsRemaining(150);
+      localStorage.setItem('wadeal_is_pro', 'false');
+    } else {
+      setIsPro(true);
+      localStorage.setItem('wadeal_is_pro', 'true');
+    }
     localStorage.setItem('wadeal_license_key', key);
-    localStorage.setItem('wadeal_is_pro', 'true');
+    localStorage.setItem('wadeal_plan', plan);
   };
 
   const handleUpdateContactStatus = (contactId: string, status: LeadStatus) => {

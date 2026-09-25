@@ -73,15 +73,32 @@ export interface I18nDictionary {
     badgeEngine: string;
     title: string;
     subtitle: string;
-    ltdBadge: string;
-    ltdTitle: string;
-    ltdSub: string;
+    annualBadge: string;
+    annualTitle: string;
+    annualPrice: string;
+    annualPeriod: string;
+    annualSub: string;
+    annualQuota: string;
+    annualContext: string;
+    scarcityClaimed: string;
+    scarcitySlotsLeft: string;
+    starterBadge: string;
+    starterTitle: string;
+    starterPrice: string;
+    starterPeriod: string;
+    starterSub: string;
+    starterQuota: string;
+    starterContext: string;
+    monthlyBadge: string;
     monthlyTitle: string;
-    monthlySub: string;
-    ltdPrice: string;
     monthlyPrice: string;
-    oneTime: string;
-    perMonth: string;
+    monthlyPeriod: string;
+    monthlySub: string;
+    monthlyQuota: string;
+    monthlyContext: string;
+    checkoutAnnual: string;
+    checkoutStarter: string;
+    checkoutMonthly: string;
     whopNotice: string;
     globalSettlement: string;
     checkoutBtn: string;
@@ -143,6 +160,8 @@ export interface I18nDictionary {
     processingInference: string;
     licenseKeyLabel: string;
     preseededKeysLabel: string;
+    annualKeyName: string;
+    starterKeyName: string;
     ltdKeyName: string;
     monthlyKeyName: string;
     validateKeyBtn: string;
@@ -178,7 +197,7 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       compliance: "Store SEO & Compliance",
       api: "API Backend",
       tagline: "AI Sales Closer & Quick Reply for WhatsApp Web",
-      ltdCta: "Get LTD ($59)",
+      ltdCta: "Early-Bird Deal ($59)",
       trial: "Trial",
       creditsRemainingLabel: (credits: number) => `Trial: ${credits} / 40 credits`,
       resetDemo: "Reset demo credits"
@@ -226,15 +245,36 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       badgeEngine: "Paywall & Licensing Engine",
       title: "Keep Closing Deals Without Hesitation 🚀",
       subtitle: '"You just saved over 2 hours and moved your deals forward with WADeal! Don\'t stall your sales pipeline—unlock unlimited closing power now."',
-      ltdBadge: "🔥 38/50 Claimed",
-      ltdTitle: "Launch Special (LTD)",
-      ltdSub: "Lifetime deal strictly capped at the first 50 store buyers. Zero recurring fees.",
-      monthlyTitle: "Standard SaaS Tier",
-      monthlySub: "Regular subscription with ongoing updates and priority objection tuning.",
-      ltdPrice: "$59",
+      // Annual Tier (Featured Hero)
+      annualBadge: "Save 74% - Top Choice",
+      annualTitle: "Early-Bird Annual Deal",
+      annualPrice: "$59",
+      annualPeriod: "/ year",
+      annualSub: "Special early access for the first 50 stores. 1 full year of unlimited closing power. No monthly fees.",
+      annualQuota: "Unlimited AI deal-closing responses for a full 365 days",
+      annualContext: "Dual Business Context + 4D Psychological Closer Engine",
+      scarcityClaimed: "38 / 50 Claimed",
+      scarcitySlotsLeft: "Only 12 Remaining!",
+      // Starter Tier
+      starterBadge: "Solo & Micro-Business",
+      starterTitle: "Starter Plan",
+      starterPrice: "$9.9",
+      starterPeriod: "/ month",
+      starterSub: "Ideal for solo merchants and micro-businesses. 150 AI deal-closing responses / month.",
+      starterQuota: "150 AI deal-closing responses / month",
+      starterContext: "1 Business Profile",
+      // Pro Monthly Tier
+      monthlyBadge: "Scale & High Volume",
+      monthlyTitle: "Pro Monthly Plan",
       monthlyPrice: "$19",
-      oneTime: "one-time",
-      perMonth: "/ month",
+      monthlyPeriod: "/ month",
+      monthlySub: "Unlimited deal-closing replies billed flexibly each month with priority server queue.",
+      monthlyQuota: "Unlimited AI deal-closing responses",
+      monthlyContext: "Multi-business context + Priority queue",
+      // Checkout CTA Dynamic Labels
+      checkoutAnnual: "Checkout with Whop ($59/year) →",
+      checkoutStarter: "Checkout with Whop ($9.9/mo) →",
+      checkoutMonthly: "Checkout with Whop ($19/mo) →",
       whopNotice: "Processed securely via Whop (Instant License Delivery):",
       globalSettlement: "Global Settlement",
       checkoutBtn: "Checkout with Whop",
@@ -242,7 +282,7 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       cardOption: "Credit / Debit Card",
       cryptoOption: "USDT / Crypto",
       haveKey: "Already purchased? Enter your Whop License Key",
-      keyPlaceholder: "e.g. WADEAL-LTD-LAUNCH50",
+      keyPlaceholder: "e.g. WADEAL-ANNUAL-LAUNCH50",
       activateBtn: "Activate",
       features: [
         "Unlimited contextual AI deal-closing responses on WhatsApp Web",
@@ -301,7 +341,9 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       processingInference: "Processing Inference...",
       licenseKeyLabel: "License Key to Validate:",
       preseededKeysLabel: "Pre-seeded Test License Keys:",
-      ltdKeyName: "(Lifetime Deal)",
+      annualKeyName: "(Early-Bird Annual - 365 Days)",
+      starterKeyName: "(Starter Plan - 150 Credits)",
+      ltdKeyName: "(Annual Special)",
       monthlyKeyName: "(Monthly SaaS)",
       validateKeyBtn: "Validate License Key",
       verifyingKey: "Verifying Key...",
@@ -334,7 +376,7 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       compliance: "سيو المتجر والأمان",
       api: "واجهة البرمجة (API)",
       tagline: "مساعد المبيعات الذكي وإغلاق الصفقات لواتساب ويب",
-      ltdCta: "امتلك النسخة مدى الحياة (59$)",
+      ltdCta: "عرض الإطلاق السنوي (59$)",
       trial: "الرصيد التجريبي",
       creditsRemainingLabel: (credits: number) => `الرصيد التجريبي: ${credits} / 40 رد متبقي`,
       resetDemo: "إعادة ضبط التجربة"
@@ -382,15 +424,36 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       badgeEngine: "محرك الترخيص والاشتراكات",
       title: "أغلق صفقاتك بلا تردد مع WADeal 🚀",
       subtitle: '"لقد وفرت أكثر من ساعتين ودفعت صفقاتك للأمام مع WADeal! لا تدع مبيعاتك تتعطل—افتح قدرات الإغلاق غير المحدودة الآن."',
-      ltdBadge: "🔥 تم حجز 38 من 50",
-      ltdTitle: "عرض الإطلاق الحصري (مدى الحياة)",
-      ltdSub: "دفعة واحدة فقط لأول 50 مشتري فقط. بدون أي اشتراك شهري متكرر.",
-      monthlyTitle: "الاشتراك الشهري المعتاد",
-      monthlySub: "اشتراك شهري مرن يشمل جميع التحديثات والدعم الفوري للأعمال.",
-      ltdPrice: "59$",
+      // Annual Tier (Featured Hero)
+      annualBadge: "وفر 74% - الخيار الأذكى",
+      annualTitle: "عرض الإطلاق السنوي",
+      annualPrice: "59$",
+      annualPeriod: "/ سنوياً",
+      annualSub: "عرض مخصص لأول 50 متجراً فقط. سنة كاملة من الردود غير المحدودة دون أي التزام شهري.",
+      annualQuota: "ردود مبيعات ذكية غير محدودة لمدة 365 يوماً كاملة",
+      annualContext: "سياق متجر مزدوج + محرك الإغلاق النفسي 4D",
+      scarcityClaimed: "تم حجز 38 من 50",
+      scarcitySlotsLeft: "متبقي 12 مقعداً فقط!",
+      // Starter Tier
+      starterBadge: "سولو والمشاريع الناشئة",
+      starterTitle: "باقة الانطلاق (Starter)",
+      starterPrice: "9.9$",
+      starterPeriod: "/ شهرياً",
+      starterSub: "مثالية للتجار الأفراد والمشاريع الناشئة. 150 رد ذكي شهرياً لإغلاق الصفقات.",
+      starterQuota: "150 رد ذكي شهرياً لإغلاق الصفقات",
+      starterContext: "ملف تعريفي لمتجر واحد",
+      // Pro Monthly Tier
+      monthlyBadge: "للمتاجر المتنامية وحجم المبيعات العالي",
+      monthlyTitle: "باقة برو الشهرية (Pro)",
       monthlyPrice: "19$",
-      oneTime: "دفعة واحدة للأبد",
-      perMonth: "/ شهرياً",
+      monthlyPeriod: "/ شهرياً",
+      monthlySub: "ردود مبيعات ذكية غير محدودة مع تجديد شهري وأولوية استجابة سحابية فائقة.",
+      monthlyQuota: "ردود غير محدودة شهرياً",
+      monthlyContext: "سياقات أعمال متعددة + أولوية معالجة",
+      // Checkout CTA Dynamic Labels
+      checkoutAnnual: "الدفع والتفعيل عبر Whop (59$ سنوياً) ←",
+      checkoutStarter: "الدفع والتفعيل عبر Whop (9.9$ شهرياً) ←",
+      checkoutMonthly: "الدفع والتفعيل عبر Whop (19$ شهرياً) ←",
       whopNotice: "معالجة آمنة وفورية عبر Whop مع تسليم فوري لمفتاح التفعيل:",
       globalSettlement: "بوابة تسوية عالمية فورية",
       checkoutBtn: "الدفع الفوري والتفعيل عبر Whop",
@@ -398,7 +461,7 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       cardOption: "بطاقة دفع / مدى / فيزا",
       cryptoOption: "عملة رقمية USDT",
       haveKey: "هل قمت بالشراء مسبقاً؟ أدخل مفتاح الترخيص هنا",
-      keyPlaceholder: "مثال: WADEAL-LTD-LAUNCH50",
+      keyPlaceholder: "مثال: WADEAL-ANNUAL-LAUNCH50",
       activateBtn: "تفعيل الترخيص",
       features: [
         "ردود مبيعات ذكية وغير محدودة لإغلاق الصفقات عبر واتساب",
@@ -457,7 +520,9 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
       processingInference: "جارٍ معالجة الرد الذكي...",
       licenseKeyLabel: "مفتاح الترخيص للتحقق منه:",
       preseededKeysLabel: "مفاتيح ترخيص تجريبية معتمدة مسبقاً:",
-      ltdKeyName: "(ترخيص مدى الحياة)",
+      annualKeyName: "(عرض سنوي مبكر - 365 يوماً)",
+      starterKeyName: "(باقة انطلاق - 150 رد)",
+      ltdKeyName: "(عرض الإطلاق السنوي)",
       monthlyKeyName: "(اشتراك شهري)",
       validateKeyBtn: "التحقق من صلاحية المفتاح",
       verifyingKey: "جارٍ التحقق...",

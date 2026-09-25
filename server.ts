@@ -27,16 +27,19 @@ app.use((req, res, next) => {
 });
 
 // In-memory credit store and valid licenses database
-// client_id -> remaining free credits (default 40)
+// client_id -> remaining free credits (default 40, or 150 for starter plan)
 const creditStore = new Map<string, number>();
-const clientLicenses = new Map<string, { key: string; plan: 'ltd' | 'monthly'; activatedAt: string }>();
+const clientLicenses = new Map<string, { key: string; plan: 'starter' | 'annual' | 'monthly' | 'ltd'; activatedAt: string; expiresAt?: string }>();
 
 // Pre-seeded valid test licenses for convenience & Whop simulation
 const validLicenses = new Set<string>([
-  'WADEAL-LTD-LAUNCH50',
-  'WADEAL-LTD-FOUNDER88',
-  'WADEAL-LTD-WHOP2026',
+  'WADEAL-ANNUAL-LAUNCH50',
+  'WADEAL-ANNUAL-59',
+  'WADEAL-STARTER-9',
+  'WADEAL-STARTER-150',
   'WADEAL-PRO-MONTHLY99',
+  'WADEAL-MONTHLY-19',
+  'WADEAL-LTD-LAUNCH50',
   'WADEAL-VIP-PROPASS',
 ]);
 
@@ -68,19 +71,22 @@ app.get('/api/v1/user-credits', (req, res) => {
   const clientId = (req.query.client_id as string) || 'default-user';
   const licenseKey = (req.query.license_key as string) || '';
 
+  const licenseInfo = clientLicenses.get(clientId);
+  const isKeyPreseeded = Boolean(licenseKey && validLicenses.has(licenseKey.toUpperCase()));
   const isPro = Boolean(
-    (licenseKey && validLicenses.has(licenseKey.toUpperCase())) ||
-    clientLicenses.has(clientId)
+    (licenseInfo && (licenseInfo.plan === 'annual' || licenseInfo.plan === 'monthly' || licenseInfo.plan === 'ltd')) ||
+    (isKeyPreseeded && !licenseKey.toUpperCase().includes('STARTER'))
   );
 
-  const licenseInfo = clientLicenses.get(clientId);
+  const plan = licenseInfo?.plan || (isKeyPreseeded ? (licenseKey.toUpperCase().includes('STARTER') ? 'starter' : licenseKey.toUpperCase().includes('ANNUAL') ? 'annual' : 'monthly') : 'trial');
 
   res.json({
     client_id: clientId,
     credits_remaining: getClientCredits(clientId),
-    initial_credits: INITIAL_CREDITS,
+    initial_credits: plan === 'starter' ? 150 : INITIAL_CREDITS,
     is_pro: isPro,
-    plan: isPro ? (licenseInfo?.plan || 'ltd') : 'trial',
+    plan: plan,
+    expires_at: licenseInfo?.expiresAt,
   });
 });
 
@@ -97,15 +103,48 @@ app.post('/api/v1/verify-license', (req, res) => {
     });
   }
 
-  // Accepts pre-seeded keys or valid pattern like WADEAL-LTD-XXXX / WADEAL-PRO-XXXX
-  const isValid = validLicenses.has(normalizedKey) || /^WADEAL-(LTD|PRO)-[A-Z0-9]{4,12}$/.test(normalizedKey);
+  // Accepts pre-seeded keys or valid pattern like WADEAL-ANNUAL-XXXX / WADEAL-STARTER-XXXX / WADEAL-PRO-XXXX / WADEAL-LTD-XXXX
+  const isValid = validLicenses.has(normalizedKey) || /^WADEAL-(ANNUAL|STARTER|PRO|MONTHLY|LTD|LAUNCH50)-[A-Z0-9]{3,12}$/.test(normalizedKey);
 
   if (isValid) {
-    const plan = normalizedKey.includes('MONTHLY') || normalizedKey.includes('PRO') ? 'monthly' : 'ltd';
+    let plan: 'starter' | 'annual' | 'monthly' = 'annual';
+    if (normalizedKey.includes('STARTER')) {
+      plan = 'starter';
+    } else if (normalizedKey.includes('MONTHLY') || normalizedKey.includes('PRO')) {
+      plan = 'monthly';
+    } else {
+      plan = 'annual';
+    }
+
+    const now = Date.now();
+    let expiresAt: string | undefined = undefined;
+    let isPro = true;
+    let tierName = 'Early-Bird Annual Deal ($59/yr)';
+    let message = 'License activated successfully! Unlimited AI deal-closing credits unlocked for a full 365 days.';
+
+    if (plan === 'annual') {
+      expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
+      isPro = true;
+      tierName = 'Early-Bird Annual Deal ($59/yr)';
+      message = 'Early-Bird Annual Deal activated! Unlimited AI deal-closing power for a full 365 days.';
+    } else if (plan === 'monthly') {
+      expiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+      isPro = true;
+      tierName = 'WADeal Pro Monthly ($19/mo)';
+      message = 'Pro Monthly License activated! Unlimited deal-closing credits with priority server queue.';
+    } else if (plan === 'starter') {
+      isPro = false;
+      tierName = 'Starter Plan ($9.9/mo)';
+      // Credit wallet set to 150 responses / month
+      creditStore.set(clientId, 150);
+      message = 'Starter Plan activated! 150 AI deal-closing responses added to your monthly wallet.';
+    }
+
     clientLicenses.set(clientId, {
       key: normalizedKey,
       plan: plan,
-      activatedAt: new Date().toISOString(),
+      activatedAt: new Date(now).toISOString(),
+      expiresAt: expiresAt,
     });
 
     return res.json({
@@ -113,8 +152,11 @@ app.post('/api/v1/verify-license', (req, res) => {
       license_key: normalizedKey,
       plan: plan,
       status: 'active',
-      tier_name: plan === 'ltd' ? 'WADeal Lifetime Deal (LTD)' : 'WADeal Pro Unlimited',
-      message: 'License activated successfully! You now have unlimited deal-closing credits.',
+      is_pro: isPro,
+      credits_remaining: getClientCredits(clientId),
+      expires_at: expiresAt,
+      tier_name: tierName,
+      message: message,
     });
   }
 
@@ -845,10 +887,11 @@ app.post('/api/v1/generate-deal-response', async (req, res) => {
     const clientLang = lang === 'en' || lang === 'ar' ? lang : undefined;
     const normalizedKey = String(license_key || '').trim().toUpperCase();
 
+    const licenseInfo = clientLicenses.get(clientId);
     const isPro = Boolean(
-      (normalizedKey && validLicenses.has(normalizedKey)) ||
-      clientLicenses.has(clientId) ||
-      (normalizedKey && /^WADEAL-(LTD|PRO)-[A-Z0-9]{4,12}$/.test(normalizedKey))
+      (licenseInfo && (licenseInfo.plan === 'annual' || licenseInfo.plan === 'monthly' || licenseInfo.plan === 'ltd')) ||
+      (normalizedKey && validLicenses.has(normalizedKey) && !normalizedKey.includes('STARTER')) ||
+      (normalizedKey && /^WADEAL-(ANNUAL|PRO|MONTHLY|LTD|LAUNCH50)-[A-Z0-9]{3,12}$/.test(normalizedKey))
     );
 
     let creditsRemaining = getClientCredits(clientId);
@@ -856,7 +899,7 @@ app.post('/api/v1/generate-deal-response', async (req, res) => {
     if (!isPro && creditsRemaining <= 0) {
       return res.status(402).json({
         error: 'QUOTA_EXHAUSTED',
-        message: 'You have used all 40 free deal-closing credits. Upgrade to WADeal Lifetime Deal ($59) to keep closing deals instantly without hesitation.',
+        message: 'Your deal-closing credits are exhausted. Upgrade to the Early-Bird Annual Deal ($59/yr) or Starter ($9.9/mo) to keep closing deals instantly without hesitation.',
         credits_remaining: 0,
         is_pro: false,
       });

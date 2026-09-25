@@ -229,7 +229,7 @@ export const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
                   value={testKey}
                   onChange={e => setTestKey(e.target.value)}
                   className="w-full p-2.5 rounded-lg bg-[#202c33] border border-[#2a3942] text-xs text-white outline-none focus:border-emerald-500 font-mono"
-                  placeholder="e.g. WADEAL-LTD-LAUNCH50"
+                  placeholder="e.g. WADEAL-ANNUAL-LAUNCH50"
                 />
               </div>
 
@@ -237,7 +237,8 @@ export const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
                 <span className="font-semibold text-white block">
                   {t.api.preseededKeysLabel}
                 </span>
-                <div>• <code className="text-emerald-400">WADEAL-LTD-LAUNCH50</code> {t.api.ltdKeyName}</div>
+                <div>• <code className="text-emerald-400">WADEAL-ANNUAL-LAUNCH50</code> {t.api.annualKeyName}</div>
+                <div>• <code className="text-emerald-400">WADEAL-STARTER-9</code> {t.api.starterKeyName}</div>
                 <div>• <code className="text-emerald-400">WADEAL-PRO-MONTHLY99</code> {t.api.monthlyKeyName}</div>
               </div>
 
