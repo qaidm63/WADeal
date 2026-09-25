@@ -157,9 +157,9 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
     replyBtn: "⚡ WADeal Reply",
     badgePro: "PRO UNLIMITED 👑",
     chips: {
-      persuasive: "⚡ Persuasive",
-      direct: "🎯 Direct & Clear",
-      urgent: "🔥 Urgent Offer"
+      persuasive: "Persuasive",
+      direct: "Direct",
+      urgent: "Urgent"
     },
     tags: {
       hot: "🔥 Hot / Ready to Buy",
@@ -313,9 +313,9 @@ export const i18nDictionary: Record<Language, I18nDictionary> = {
     replyBtn: "⚡ رد WADeal الذكي",
     badgePro: "برو غير محدود 👑",
     chips: {
-      persuasive: "⚡ إقناعي ومفصل",
-      direct: "🎯 حاسم وسريع",
-      urgent: "🔥 عرض خاص / حسم"
+      persuasive: "إقناعي",
+      direct: "حاسم",
+      urgent: "حسم فوري"
     },
     tags: {
       hot: "🔥 جاهز للشراء",

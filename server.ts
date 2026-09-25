@@ -1,6 +1,7 @@
 import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
@@ -13,6 +14,17 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// Enable CORS for frontend and Chrome Extension requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // In-memory credit store and valid licenses database
 // client_id -> remaining free credits (default 40)
@@ -120,7 +132,7 @@ interface SalesEngineResult {
   replies: Array<{ type: 'Persuasive' | 'Direct' | 'Urgent'; short_label: string; text: string }>;
 }
 
-function extractBusinessParameters(merchantContext: string) {
+function extractBusinessParameters(merchantContext: string, forceArabic?: boolean) {
   const ctx = merchantContext || '';
 
   // Extract prices (e.g. $48, 48$, 80$, $80, 48 ريال, 80 ريال)
@@ -136,10 +148,14 @@ function extractBusinessParameters(merchantContext: string) {
     currency = '£';
   }
 
-  const singlePrice = prices[0] ? (currency === '$' ? `${prices[0]}$` : `${prices[0]} ${currency}`) : '48$';
-  const bundlePrice = prices[1] ? (currency === '$' ? `${prices[1]}$` : `${prices[1]} ${currency}`) : '80$';
+  const isArabic = forceArabic !== undefined ? forceArabic : /[\u0600-\u06FF]/.test(ctx);
+  const singlePrice = prices[0]
+    ? (isArabic ? (currency === '$' ? `${prices[0]}$` : `${prices[0]} ${currency}`) : (currency === '$' ? `$${prices[0]}` : `${prices[0]} ${currency}`))
+    : (isArabic ? '48$' : '$48');
+  const bundlePrice = prices[1]
+    ? (isArabic ? (currency === '$' ? `${prices[1]}$` : `${prices[1]} ${currency}`) : (currency === '$' ? `$${prices[1]}` : `${prices[1]} ${currency}`))
+    : (isArabic ? '80$' : '$80');
 
-  const isArabic = /[\u0600-\u06FF]/.test(ctx);
   const deliveryTerm = isArabic ? 'خلال 24–48 ساعة' : 'within 24–48 hours';
   const warrantyTerm = isArabic ? 'ضمان استبدال رسمي لمدة 14 يوماً' : 'official 14-day replacement guarantee';
   const paymentTerm = isArabic ? 'الدفع عند الاستلام متاح' : 'Cash on delivery available';
@@ -147,7 +163,7 @@ function extractBusinessParameters(merchantContext: string) {
   return { singlePrice, bundlePrice, deliveryTerm, warrantyTerm, paymentTerm, currency };
 }
 
-function buildDynamicContextualReplies(merchantContext: string, chatHistory: any[], customerMsgOverride?: string): SalesEngineResult {
+function buildDynamicContextualReplies(merchantContext: string, chatHistory: any[], customerMsgOverride?: string, requestedLang?: 'en' | 'ar'): SalesEngineResult {
   let lastMsg = customerMsgOverride ? String(customerMsgOverride).trim() : '';
   if (!lastMsg && Array.isArray(chatHistory) && chatHistory.length > 0) {
     const customerMsgs = chatHistory.filter(m => m && m.sender && !m.sender.toLowerCase().includes('merchant') && !m.sender.toLowerCase().includes('you'));
@@ -156,13 +172,14 @@ function buildDynamicContextualReplies(merchantContext: string, chatHistory: any
       : String(chatHistory[chatHistory.length - 1].text || '').trim();
   }
   if (!lastMsg) {
-    lastMsg = 'كم السعر وهل يوجد ضمان استبدال وتوصيل سريع؟';
+    lastMsg = requestedLang === 'en' ? 'What is the price, and do you offer warranty and fast delivery?' : 'كم السعر وهل يوجد ضمان استبدال وتوصيل سريع؟';
   }
 
-  const isArabic = /[\u0600-\u06FF]/.test(lastMsg) || /[\u0600-\u06FF]/.test(merchantContext);
+  // Determine language: prioritize requestedLang if provided, otherwise detect from input & context
+  const isArabic = requestedLang ? requestedLang === 'ar' : (/[\u0600-\u06FF]/.test(lastMsg) || /[\u0600-\u06FF]/.test(merchantContext));
   const lowerMsg = lastMsg.toLowerCase();
   const trimmedMsg = lastMsg.trim();
-  const { singlePrice, bundlePrice, deliveryTerm, warrantyTerm } = extractBusinessParameters(merchantContext);
+  const { singlePrice, bundlePrice, deliveryTerm, warrantyTerm } = extractBusinessParameters(merchantContext, isArabic);
 
   // Extract location/address from message if mentioned
   let locationText = '';
@@ -823,8 +840,9 @@ app.post('/api/v1/reset-demo', (req, res) => {
 // 4. Generate deal response
 app.post('/api/v1/generate-deal-response', async (req, res) => {
   try {
-    const { client_id, license_key, business_context, chat_history, last_customer_message } = req.body || {};
+    const { client_id, license_key, business_context, chat_history, last_customer_message, lang } = req.body || {};
     const clientId = client_id || 'default-user';
+    const clientLang = lang === 'en' || lang === 'ar' ? lang : undefined;
     const normalizedKey = String(license_key || '').trim().toUpperCase();
 
     const isPro = Boolean(
@@ -946,13 +964,19 @@ You MUST return strictly valid, raw JSON without any markdown code fences (\`\`\
   ]
 }`;
 
+    const langDirective = clientLang === 'ar'
+      ? `STRICT LANGUAGE REQUIREMENT: Output MUST be 100% Arabic (authentic Gulf/Saudi dialect). All JSON fields ("objection_detected", "short_label", "text") MUST be 100% Arabic without any English words or mixed text.`
+      : `STRICT LANGUAGE REQUIREMENT: Output MUST be 100% English. All JSON fields ("objection_detected", "short_label", "text") MUST be 100% natural, crisp English without any Arabic words or Arabic script.`;
+
+    const fullPrompt = `${systemPrompt}\n\n[STRICT LANGUAGE DIRECTIVE]:\n${langDirective}`;
+
     let parsedResult: any = null;
 
     if (ai) {
       try {
         const response = await ai.models.generateContent({
           model: 'gemini-3.8-flash',
-          contents: systemPrompt,
+          contents: fullPrompt,
           config: {
             responseMimeType: 'application/json',
           },
@@ -960,7 +984,25 @@ You MUST return strictly valid, raw JSON without any markdown code fences (\`\`\
 
         const textOutput = response.text || '';
         if (textOutput) {
-          parsedResult = JSON.parse(textOutput);
+          const parsed = JSON.parse(textOutput);
+          // Strict language validation: discard if there is hybrid language leakage
+          if (parsed && Array.isArray(parsed.replies) && parsed.replies.length >= 3) {
+            if (clientLang === 'en') {
+              const hasArabic = /[\u0600-\u06FF]/.test(parsed.objection_detected || '') ||
+                parsed.replies.some((r: any) => /[\u0600-\u06FF]/.test(r.short_label || '') || /[\u0600-\u06FF]/.test(r.text || ''));
+              if (!hasArabic) {
+                parsedResult = parsed;
+              }
+            } else if (clientLang === 'ar') {
+              const hasArabic = /[\u0600-\u06FF]/.test(parsed.objection_detected || '') ||
+                parsed.replies.some((r: any) => /[\u0600-\u06FF]/.test(r.text || ''));
+              if (hasArabic) {
+                parsedResult = parsed;
+              }
+            } else {
+              parsedResult = parsed;
+            }
+          }
         }
       } catch {
         // Quietly route to smart contextual generator when API key permissions are restricted
@@ -969,7 +1011,7 @@ You MUST return strictly valid, raw JSON without any markdown code fences (\`\`\
 
     // High performance dynamic contextual generator grounded in Merchant Business Context & 4D Matrix
     if (!parsedResult || !Array.isArray(parsedResult.replies) || parsedResult.replies.length < 3) {
-      parsedResult = buildDynamicContextualReplies(merchantContext, chat_history, explicitCustomerInquiry);
+      parsedResult = buildDynamicContextualReplies(merchantContext, chat_history, explicitCustomerInquiry, clientLang);
     }
 
     // Deduct credit if not pro
@@ -997,25 +1039,39 @@ You MUST return strictly valid, raw JSON without any markdown code fences (\`\`\
   }
 });
 
+// Explicit JSON fallback for any unhandled /api/* paths to guarantee it never returns HTML
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    error: 'NOT_FOUND',
+    message: `API endpoint ${req.method} ${req.originalUrl} not found.`,
+  });
+});
+
 // Start server with Vite middleware in dev or static files in production
 async function startServer() {
-  if (process.env.NODE_ENV === 'production') {
+  // Start listening immediately so Express API routes are responsive with zero delay
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`WADeal Full-Stack Server running on http://0.0.0.0:${PORT}`);
+  });
+
+  const isProd = process.env.NODE_ENV === 'production' && fs.existsSync(path.join(__dirname, 'dist'));
+  if (isProd) {
     app.use(express.static(path.join(__dirname, 'dist')));
     app.get('*', (req, res) => {
       res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
   } else {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (err) {
+      console.error('Failed to initialize Vite dev server middleware:', err);
+    }
   }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`WADeal Full-Stack Server running on http://0.0.0.0:${PORT}`);
-  });
 }
 
 startServer();

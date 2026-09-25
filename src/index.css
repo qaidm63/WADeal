@@ -64,3 +64,83 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ==========================================================================
+   WADeal Reply Button - 2-Second Laser Sweep Animation (Right to Left)
+   ========================================================================== */
+@keyframes laser-sweep-rtl {
+  0% {
+    transform: translateX(200%) skewX(-25deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  95%, 100% {
+    transform: translateX(-220%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes laser-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0, 168, 132, 0.35), 0 0 0 1px rgba(0, 255, 163, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(0, 255, 163, 0.7), 0 0 8px rgba(37, 211, 102, 0.9), 0 0 0 1.5px rgba(0, 255, 163, 0.9);
+  }
+}
+
+.wadeal-main-trigger-btn,
+.wadeal-main-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  min-height: 32px !important;
+  box-sizing: border-box !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  border-radius: 9999px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  animation: laser-glow-pulse 2s infinite ease-in-out !important;
+}
+
+.wadeal-main-trigger-btn::after,
+.wadeal-main-btn::after {
+  content: '';
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  right: 0;
+  width: 50px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(37, 211, 102, 0.2) 20%,
+    rgba(0, 255, 163, 0.9) 45%,
+    #ffffff 50%,
+    rgba(0, 255, 163, 0.9) 55%,
+    rgba(56, 189, 248, 0.5) 80%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 8px #00ffa3) drop-shadow(0 0 16px #25d366);
+  pointer-events: none;
+  z-index: 1;
+  animation: laser-sweep-rtl 2s infinite ease-in-out;
+}
+
+.wadeal-main-trigger-btn > *,
+.wadeal-main-btn > * {
+  position: relative;
+  z-index: 2;
+}

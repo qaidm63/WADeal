@@ -65,29 +65,34 @@
 .wadeal-chips-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   overflow-x: auto;
   white-space: nowrap;
-  padding: 4px 2px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  min-height: 38px;
+  padding: 3px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  min-height: 34px;
 }
 .wadeal-chips-shelf::-webkit-scrollbar,
 .wadeal-chips-container::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+}
+.wadeal-chips-shelf::-webkit-scrollbar-thumb,
+.wadeal-chips-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
 }
 
 .wadeal-suggestion-chip,
 .wadeal-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 20px;
+  gap: 5px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 16px;
   border: 1px solid rgba(0, 168, 132, 0.4);
   background: #1f2c34;
   color: #e9edef;
@@ -164,7 +169,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 12px;
+  gap: 8px;
   padding: 2px 0;
 }
 
@@ -172,15 +177,16 @@
 .wadeal-action-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .controls-end,
 .wadeal-end-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -190,16 +196,51 @@
   margin-right: auto;
 }
 
+/* ==========================================================================
+   WADeal Trigger Button - 2-Second Laser Sweep (Right to Left)
+   ========================================================================== */
+@keyframes laser-sweep-rtl {
+  0% {
+    transform: translateX(200%) skewX(-25deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  95%, 100% {
+    transform: translateX(-220%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes laser-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0, 168, 132, 0.35), 0 0 0 1px rgba(0, 255, 163, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(0, 255, 163, 0.7), 0 0 8px rgba(37, 211, 102, 0.9), 0 0 0 1.5px rgba(0, 255, 163, 0.9);
+  }
+}
+
 .wadeal-main-trigger-btn,
 .wadeal-main-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 6px 14px;
+  min-height: 32px;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #00a884, #008069);
   color: #ffffff;
-  border: none;
-  border-radius: 18px;
+  border: 1px solid rgba(0, 255, 163, 0.4);
+  border-radius: 9999px;
   font-weight: 700;
   font-size: 12px;
   cursor: pointer;
@@ -207,12 +248,43 @@
   box-shadow: 0 2px 6px rgba(0, 168, 132, 0.25);
   transition: all 0.15s ease;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  animation: laser-glow-pulse 2s infinite ease-in-out;
+}
+.wadeal-main-trigger-btn::after,
+.wadeal-main-btn::after {
+  content: '';
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  right: 0;
+  width: 50px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(37, 211, 102, 0.2) 20%,
+    rgba(0, 255, 163, 0.9) 45%,
+    #ffffff 50%,
+    rgba(0, 255, 163, 0.9) 55%,
+    rgba(56, 189, 248, 0.5) 80%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 8px #00ffa3) drop-shadow(0 0 16px #25d366);
+  pointer-events: none;
+  z-index: 1;
+  animation: laser-sweep-rtl 2s infinite ease-in-out;
+}
+.wadeal-main-trigger-btn > *,
+.wadeal-main-btn > * {
+  position: relative;
+  z-index: 2;
 }
 .wadeal-main-trigger-btn:hover,
 .wadeal-main-btn:hover {
   background: linear-gradient(135deg, #02b690, #009378);
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 168, 132, 0.35);
+  box-shadow: 0 3px 12px rgba(0, 255, 163, 0.45);
 }
 .wadeal-main-trigger-btn:active,
 .wadeal-main-btn:active {
@@ -230,11 +302,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: #8696a0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.15s ease;
 }
 .wadeal-info-icon:hover,
@@ -246,23 +318,54 @@
 .wadeal-lang-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 2px 7px;
   background: #202c33;
-  color: #8696a0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #25d366;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 .wadeal-lang-switch:hover,
 .wadeal-lang-toggle:hover {
   background: #2a3942;
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.wadeal-translate-icon {
+  width: 12px;
+  height: 12px;
+  stroke: #25d366;
+  flex-shrink: 0;
+  transition: stroke 0.15s ease;
+}
+.wadeal-lang-switch:hover .wadeal-translate-icon,
+.wadeal-lang-toggle:hover .wadeal-translate-icon {
+  stroke: #ffffff;
+}
+
+#wadeal-objection-tag,
+.wadeal-objection-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #8696a0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .wadeal-pro-badge,

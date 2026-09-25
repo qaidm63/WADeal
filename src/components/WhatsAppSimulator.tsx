@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Contact, ChatMessage, DealReply, LeadStatus } from '../types';
 import { Language, i18nDictionary } from '../utils/i18n';
+import { generateClientFallbackDealResponse } from '../utils/salesEngineFallback';
 
 interface WhatsAppSimulatorProps {
   contacts: Contact[];
@@ -72,13 +73,13 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeContact?.messages, smartReplies]);
 
-  // Clean state when contact changes
+  // Clean state when contact or language changes
   useEffect(() => {
     setSmartReplies([]);
     setDetectedObjection('');
     setDealState('DISCOVERY');
     setCustomerPersona('');
-  }, [selectedContactId]);
+  }, [selectedContactId, lang]);
 
   // Handle triggering WADeal AI Closing engine
   const handleGenerateReply = async () => {
@@ -114,7 +115,8 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
           license_key: licenseKey,
           business_context: businessContext,
           chat_history: chatHistory,
-          last_customer_message: lastCustomerMessage
+          last_customer_message: lastCustomerMessage,
+          lang: lang
         })
       });
 
@@ -124,11 +126,23 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
         return;
       }
 
-      if (!res.ok) {
-        throw new Error('Failed to generate response');
+      let data: any = null;
+      try {
+        const rawText = await res.text();
+        const trimmed = rawText.trim();
+        // Ensure the response is valid JSON and not an HTML warmup page (<!doctype ...)
+        if (!trimmed.startsWith('<') && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
+          data = JSON.parse(trimmed);
+        }
+      } catch (parseErr) {
+        console.warn('Backend response was not valid JSON, applying client fallback engine:', parseErr);
       }
 
-      const data = await res.json();
+      // If backend was warming up, returned HTML, or had an error, use client-side psychological closer
+      if (!data || !Array.isArray(data.replies) || data.replies.length === 0) {
+        data = generateClientFallbackDealResponse(businessContext, lastCustomerMessage, chatHistory, lang);
+      }
+
       setSmartReplies(data.replies || []);
       setDetectedObjection(data.objection_detected || (isRTL ? 'استفسار واعتراض' : 'Customer Inquiry'));
       if (data.customer_persona) {
@@ -148,9 +162,13 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
         onCreditsChange(data.credits_remaining);
       }
     } catch (err) {
-      console.error('Error generating WADeal suggestions:', err);
-      setSmartReplies([]);
-      setDetectedObjection(isRTL ? '⚠️ تعذر توليد الرد' : '⚠️ Generation failed');
+      console.warn('API error, applying client-side closer fallback:', err);
+      // Even in case of complete network drop, serve the instant closer suggestions
+      const fallback = generateClientFallbackDealResponse(businessContext, lastCustomerMessage, []);
+      setSmartReplies(fallback.replies);
+      setDetectedObjection(fallback.objection_detected);
+      setCustomerPersona(fallback.customer_persona);
+      setDealState(fallback.deal_state);
     } finally {
       setIsAnalyzing(false);
     }
@@ -550,22 +568,28 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
 
         {/* TWO-TIER WADEAL DOCK CONTAINER (Separated Chips Tier + Controls Tier) */}
         <div
-          className="wadeal-dock-container flex flex-col gap-2 p-2.5 sm:px-3 bg-[#111b21]/95 backdrop-blur-md border-t border-[#222e35] z-20 flex-shrink-0"
+          className="wadeal-dock-container flex flex-col gap-1.5 p-2 sm:px-2.5 bg-[#111b21]/95 backdrop-blur-md border-t border-[#222e35] z-20 flex-shrink-0"
           style={{ background: 'rgba(17, 27, 33, 0.96)' }}
         >
           {/* TIER 1: Dedicated Full-Width Suggestion Chips Shelf (Visible & Fully Clickable) */}
-          <div className="wadeal-chips-shelf flex items-center gap-2 w-full overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 min-h-[36px]">
+          <div className="wadeal-chips-shelf flex items-center gap-1.5 w-full overflow-x-auto whitespace-nowrap scrollbar-none py-0.5 min-h-[34px]">
             {smartReplies.length > 0 ? (
               smartReplies.map((reply, idx) => {
                 const isPersuasive = reply.type === 'Persuasive';
                 const isDirect = reply.type === 'Direct';
                 const isUrgent = reply.type === 'Urgent';
 
+                // Single Icon Policy: Exactly one icon per chip
+                const chipIcon = isPersuasive ? '⚡' : isDirect ? '🎯' : '🔥';
+                const rawChipLabel = isPersuasive ? t.chips.persuasive : isDirect ? t.chips.direct : t.chips.urgent;
+                const cleanChipLabel = (rawChipLabel || '').replace(/^[⚡🎯🔥\s]+/, '').trim();
+                const cleanShortLabel = (reply.short_label || '').replace(/^[⚡🎯🔥\s]+/, '').trim();
+
                 return (
                   <div key={idx} className="relative group inline-block flex-shrink-0 animate-fade-in">
                     <button
                       onClick={() => handleInjectReply(reply.text)}
-                      className={`wadeal-suggestion-chip text-xs font-semibold px-3.5 py-1.5 rounded-full border transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                      className={`wadeal-suggestion-chip text-xs font-semibold px-3 py-1.5 rounded-full border transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5 shadow-sm cursor-pointer ${
                         isPersuasive
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500 hover:text-[#111b21] hover:border-emerald-500'
                           : isDirect
@@ -574,19 +598,19 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
                       }`}
                       data-type={reply.type.toLowerCase()}
                     >
-                      <span>{isPersuasive ? '⚡' : isDirect ? '🎯' : '🔥'}</span>
+                      <span>{chipIcon}</span>
                       <strong className="font-bold">
-                        {isPersuasive ? t.chips.persuasive : isDirect ? t.chips.direct : t.chips.urgent}:
+                        {cleanChipLabel}:
                       </strong>
                       <span className="truncate max-w-[180px] sm:max-w-[260px] lg:max-w-[340px] wadeal-chip-text wadeal-bidi">
-                        {reply.short_label}
+                        {cleanShortLabel}
                       </span>
                     </button>
 
                     {/* Clean Hover Preview Tooltip showing full text */}
                     <div className="chip-preview-tooltip absolute bottom-full mb-2 start-0 w-80 max-w-[85vw] p-3 rounded-xl bg-[#202c33] border border-white/15 shadow-2xl text-xs text-white opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 z-50 whitespace-normal text-start">
                       <div className="flex items-center justify-between font-bold text-emerald-400 mb-1">
-                        <span>{isPersuasive ? t.chips.persuasive : isDirect ? t.chips.direct : t.chips.urgent} ({reply.short_label})</span>
+                        <span>{chipIcon} {cleanChipLabel} ({cleanShortLabel})</span>
                         <span className="text-[10px] text-[#8696a0] font-normal">{t.simulator.clickToInject}</span>
                       </div>
                       <p className="text-slate-200 text-xs leading-relaxed italic wadeal-bidi">
@@ -610,21 +634,21 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
           </div>
 
           {/* TIER 2: Controls & Action Bar (Separated from Chips) */}
-          <div className="wadeal-controls-bar flex items-center justify-between w-full gap-3 pt-1 border-t border-white/5">
+          <div className="wadeal-controls-bar flex items-center justify-between w-full gap-2 pt-1 border-t border-white/5">
             {/* Controls Start: Action Trigger Button & Info Icon & Stage Badge */}
-            <div className="controls-start flex items-center gap-2 flex-shrink-0">
+            <div className="controls-start flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={handleGenerateReply}
                 disabled={isAnalyzing}
-                className={`wadeal-main-trigger-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-md flex-shrink-0 cursor-pointer ${
+                className={`wadeal-main-trigger-btn relative overflow-hidden flex items-center justify-center gap-1.5 px-3.5 py-1.5 min-h-[32px] rounded-full text-xs font-bold leading-normal transition-all shadow-md flex-shrink-0 cursor-pointer border border-emerald-400/40 ${
                   isAnalyzing
                     ? 'bg-emerald-800 text-white cursor-wait animate-pulse'
                     : 'bg-gradient-to-r from-[#00a884] to-[#008069] hover:from-[#02b690] hover:to-[#009378] text-white active:scale-95'
                 }`}
               >
-                <Zap className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-                <span className="whitespace-nowrap">
-                  {isAnalyzing ? t.simulator.analyzing : t.replyBtn}
+                <Zap className={`w-3.5 h-3.5 text-white flex-shrink-0 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                <span className="whitespace-nowrap leading-none font-bold">
+                  {isAnalyzing ? (isRTL ? 'تحليل...' : 'Analyzing...') : (isRTL ? 'رد WADeal' : 'WADeal Reply')}
                 </span>
               </button>
 
@@ -641,59 +665,65 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
                 </div>
               </div>
 
-              {/* Objection Detected Pill (Unclipped & Non-breaking with Stage Distinction) */}
+              {/* Objection Detected Pill (Ultra-compact & Non-breaking) */}
               {detectedObjection && (
-                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0 wadeal-bidi transition-all shadow-sm ${
-                  dealState === 'CLOSING'
-                    ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50 shadow-emerald-950/40'
-                    : dealState === 'OBJECTION'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
-                    : dealState === 'LOGISTICS'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-400/40'
-                    : 'bg-white/5 text-emerald-300 border border-emerald-500/20'
-                }`}>
+                <span
+                  title={detectedObjection}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-md truncate max-w-[140px] flex-shrink-0 wadeal-bidi transition-all shadow-sm ${
+                    dealState === 'CLOSING'
+                      ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50 shadow-emerald-950/40'
+                      : dealState === 'OBJECTION'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
+                      : dealState === 'LOGISTICS'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-400/40'
+                      : 'bg-white/5 text-emerald-300 border border-emerald-500/20'
+                  }`}
+                >
                   {dealState === 'CLOSING' ? '👑' : dealState === 'OBJECTION' ? '⚠️' : dealState === 'LOGISTICS' ? '🚚' : '🎯'} {detectedObjection}
                 </span>
               )}
 
-              {/* 4D Persona Profiling Badge */}
+              {/* 4D Persona Profiling Badge (Ultra-compact) */}
               {customerPersona && (
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 whitespace-nowrap flex-shrink-0" title="Buyer Persona Profiling">
+                <span
+                  className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 truncate max-w-[140px] flex-shrink-0"
+                  title="Buyer Persona Profiling"
+                >
                   <span>👤</span>
-                  <span>
-                    {customerPersona === 'Driver' ? (isRTL ? 'العملي المستعجل' : 'Driver') :
-                     customerPersona === 'Skeptic' ? (isRTL ? 'المتشكك الحذر' : 'Skeptic') :
-                     customerPersona === 'Bargain' ? (isRTL ? 'المفاوض الذكي' : 'Bargain') :
-                     (isRTL ? 'المتردد الودود' : 'Hesitant')}
+                  <span className="truncate">
+                    {customerPersona === 'Driver' ? (isRTL ? 'العملي' : 'Driver') :
+                     customerPersona === 'Skeptic' ? (isRTL ? 'المتشكك' : 'Skeptic') :
+                     customerPersona === 'Bargain' || customerPersona === 'Value Maximizer' ? (isRTL ? 'المفاوض' : 'Bargain') :
+                     (isRTL ? 'المتردد' : 'Hesitant')}
                   </span>
                 </span>
               )}
             </div>
 
-            {/* Controls End: Language Switcher & Pro Badge / Credits */}
-            <div className="controls-end flex items-center gap-2 flex-shrink-0 ms-auto">
-              {/* Language toggle inside action bar */}
+            {/* Controls End: Minimalist Language Switcher & Pro Badge / Credits */}
+            <div className="controls-end flex items-center gap-1.5 flex-shrink-0 ms-auto">
+              {/* Minimalist 2-letter language switcher badge with translation icon */}
               <button
                 onClick={onToggleLang}
-                className="wadeal-lang-switch text-[11px] px-2.5 py-1 rounded-md bg-[#202c33] hover:bg-[#2a3942] text-[#8696a0] hover:text-white border border-white/10 transition-colors whitespace-nowrap font-medium flex items-center gap-1.5 cursor-pointer"
+                className="wadeal-lang-switch flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-md bg-[#202c33] hover:bg-[#2a3942] text-emerald-400 hover:text-white border border-white/10 transition-colors whitespace-nowrap cursor-pointer flex-shrink-0"
                 title={isRTL ? 'Switch to English' : 'التحويل للعربية'}
               >
                 <Languages className="w-3 h-3 text-emerald-400" />
-                <span>{t.langSwitch} 🌐</span>
+                <span>{lang === 'en' ? 'AR' : 'EN'}</span>
               </button>
 
               {isPro ? (
                 <div
-                  className="wadeal-pro-badge flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/30 whitespace-nowrap flex-shrink-0"
+                  className="wadeal-pro-badge flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/30 whitespace-nowrap flex-shrink-0"
                   style={{ whiteSpace: 'nowrap' }}
                 >
                   <Crown className="w-3 h-3 text-amber-400" />
-                  <span>{t.badgePro}</span>
+                  <span>PRO</span>
                 </div>
               ) : (
                 <button
                   onClick={onOpenPaywall}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors flex items-center gap-1 whitespace-nowrap flex-shrink-0 cursor-pointer ${
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-md transition-colors flex items-center gap-1 whitespace-nowrap flex-shrink-0 cursor-pointer ${
                     creditsRemaining <= 5
                       ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse'
                       : 'bg-[#202c33] text-[#8696a0] hover:text-white border border-white/10'
@@ -701,7 +731,7 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
                   style={{ whiteSpace: 'nowrap' }}
                   title={isRTL ? 'الرصيد التجريبي المتبقي' : 'Remaining free deal-closing credits'}
                 >
-                  <span>{t.nav.creditsRemainingLabel(creditsRemaining)}</span>
+                  <span>{creditsRemaining}/40</span>
                 </button>
               )}
             </div>

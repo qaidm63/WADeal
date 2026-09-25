@@ -13,9 +13,9 @@
       replyBtn: "⚡ WADeal Reply",
       badgePro: "PRO UNLIMITED",
       chips: {
-        persuasive: "⚡ Persuasive",
-        direct: "🎯 Direct & Clear",
-        urgent: "🔥 Urgent Offer"
+        persuasive: "Persuasive",
+        direct: "Direct",
+        urgent: "Urgent"
       },
       tags: {
         hot: "🔥 Hot / Ready to Buy",
@@ -25,7 +25,7 @@
       },
       contextPlaceholder: "Enter your business pricing, policies, and terms...",
       trustBanner: "Messages are end-to-end encrypted. WADeal acts 100% human-in-the-loop with zero ban risk.",
-      langSwitch: "عربي",
+      langSwitch: "AR",
       clickToInject: "Click chip to inject into chat",
       helperTooltip: "Click ⚡ WADeal Reply to generate 3 tailored closing replies grounded in your business rules.",
       analyzing: "Analyzing..."
@@ -34,9 +34,9 @@
       replyBtn: "⚡ رد WADeal الذكي",
       badgePro: "برو غير محدود 👑",
       chips: {
-        persuasive: "⚡ إقناعي ومفصل",
-        direct: "🎯 حاسم وسريع",
-        urgent: "🔥 عرض خاص / حسم"
+        persuasive: "إقناعي",
+        direct: "حاسم",
+        urgent: "حسم فوري"
       },
       tags: {
         hot: "🔥 جاهز للشراء",
@@ -259,7 +259,8 @@
           license_key: config.licenseKey,
           business_context: config.businessContext,
           chat_history: chatHistory,
-          last_customer_message: lastCustomerMessage
+          last_customer_message: lastCustomerMessage,
+          lang: currentLang
         })
       });
 
@@ -276,7 +277,21 @@
         throw new Error(`Server returned status ${response.status}`);
       }
 
-      const data = await response.json();
+      let data = null;
+      try {
+        const rawText = await response.text();
+        const trimmed = rawText.trim();
+        if (!trimmed.startsWith('<') && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
+          data = JSON.parse(trimmed);
+        }
+      } catch (parseErr) {
+        console.warn('WADeal: Response parsing error:', parseErr);
+      }
+
+      if (!data || !Array.isArray(data.replies)) {
+        throw new Error('Server returned non-JSON response');
+      }
+
       currentReplies = data.replies || [];
       currentObjection = data.objection_detected || (currentLang === 'ar' ? 'استفسار واعتراض' : 'Customer Inquiry');
 
@@ -308,29 +323,33 @@
 
     chipsContainer.innerHTML = '';
     if (objectionPill) {
-      objectionPill.textContent = '🎯 ' + objection;
-      objectionPill.style.display = 'inline-block';
+      const cleanObj = (objection || '').replace(/^[🎯👑⚠️🚚\s]+/, '').trim();
+      objectionPill.textContent = cleanObj ? '🎯 ' + cleanObj : '';
+      objectionPill.title = cleanObj;
+      objectionPill.style.display = cleanObj ? 'inline-block' : 'none';
     }
 
     replies.forEach((reply) => {
       const chip = document.createElement('button');
       const isPersuasive = reply.type === 'Persuasive';
       const isDirect = reply.type === 'Direct';
-      const isUrgent = reply.type === 'Urgent';
 
       const typeKey = isPersuasive ? 'persuasive' : isDirect ? 'direct' : 'urgent';
-      const typeLabel = isPersuasive ? t.chips.persuasive :
-                        isDirect ? t.chips.direct : t.chips.urgent;
+      const rawTypeLabel = isPersuasive ? t.chips.persuasive :
+                           isDirect ? t.chips.direct : t.chips.urgent;
+      const cleanTypeLabel = (rawTypeLabel || '').replace(/^[⚡🎯🔥\s]+/, '').trim();
+      const cleanShortLabel = (reply.short_label || '').replace(/^[⚡🎯🔥\s]+/, '').trim();
+      const chipIcon = isPersuasive ? '⚡' : isDirect ? '🎯' : '🔥';
 
       chip.className = `wadeal-suggestion-chip ${typeKey}`;
       chip.setAttribute('data-type', typeKey);
       chip.innerHTML = `
-        <span>${isPersuasive ? '⚡' : isDirect ? '🎯' : '🔥'}</span>
-        <strong>${typeLabel}:</strong>
-        <span>${reply.short_label}</span>
+        <span>${chipIcon}</span>
+        <strong>${cleanTypeLabel}:</strong>
+        <span>${cleanShortLabel}</span>
         <span class="chip-preview-tooltip">
           <span class="chip-tooltip-header">
-            <span>${typeLabel} (${reply.short_label})</span>
+            <span>${chipIcon} ${cleanTypeLabel} (${cleanShortLabel})</span>
             <span class="chip-tooltip-hint">${t.clickToInject}</span>
           </span>
           <span class="chip-tooltip-body">"${reply.text}"</span>
@@ -347,19 +366,23 @@
     // Update Pro or Credits Badge in Bottom Tier (Tier 2)
     const endGroup = document.getElementById('wadeal-end-group');
     if (endGroup) {
+      const langLabel = currentLang === 'en' ? 'AR' : 'EN';
+      const langTitle = currentLang === 'en' ? 'Switch to Arabic' : 'التحويل للإنجليزية';
+      const langBtnHtml = `
+        <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="${langTitle}">
+          <svg class="wadeal-translate-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+          <span>${langLabel}</span>
+        </button>
+      `;
       if (isPro) {
         endGroup.innerHTML = `
-          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="Toggle Language">
-            ${t.langSwitch} 🌐
-          </button>
+          ${langBtnHtml}
           <span class="wadeal-pro-badge">${t.badgePro}</span>
         `;
       } else {
         const cred = typeof creditsRemaining === 'number' ? creditsRemaining : 40;
         endGroup.innerHTML = `
-          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="Toggle Language">
-            ${t.langSwitch} 🌐
-          </button>
+          ${langBtnHtml}
           <button id="wadeal-credits-btn" class="wadeal-badge-credits">
             ${cred} / 40 ${currentLang === 'ar' ? 'رصيد' : 'left'}
           </button>
@@ -520,12 +543,13 @@
             <span>ⓘ</span>
             <div class="wadeal-helper-popover">${t.helperTooltip}</div>
           </div>
-          <span id="wadeal-objection-tag" style="display: none; font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.08); color: #8696a0;"></span>
+          <span id="wadeal-objection-tag" style="display: none; font-size: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); color: #8696a0; max-width: 140px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex-shrink: 0;"></span>
         </div>
 
         <div id="wadeal-end-group" class="controls-end">
-          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="Toggle Language">
-            ${t.langSwitch} 🌐
+          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="${currentLang === 'en' ? 'Switch to Arabic' : 'التحويل للإنجليزية'}">
+            <svg class="wadeal-translate-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            <span>${currentLang === 'en' ? 'AR' : 'EN'}</span>
           </button>
           <button id="wadeal-credits-btn" class="wadeal-badge-credits">
             40 / 40 ${isAr ? 'رصيد' : 'left'}

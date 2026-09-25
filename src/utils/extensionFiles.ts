@@ -72,9 +72,9 @@ export const EXTENSION_FILES: ExtensionFile[] = [
       replyBtn: "⚡ WADeal Reply",
       badgePro: "PRO UNLIMITED",
       chips: {
-        persuasive: "⚡ Persuasive",
-        direct: "🎯 Direct & Clear",
-        urgent: "🔥 Urgent Offer"
+        persuasive: "Persuasive",
+        direct: "Direct",
+        urgent: "Urgent"
       },
       tags: {
         hot: "🔥 Hot / Ready to Buy",
@@ -84,7 +84,7 @@ export const EXTENSION_FILES: ExtensionFile[] = [
       },
       contextPlaceholder: "Enter your business pricing, policies, and terms...",
       trustBanner: "Messages are end-to-end encrypted. WADeal acts 100% human-in-the-loop with zero ban risk.",
-      langSwitch: "عربي",
+      langSwitch: "AR",
       clickToInject: "Click chip to inject into chat",
       helperTooltip: "Click ⚡ WADeal Reply to generate 3 tailored closing replies grounded in your business rules.",
       analyzing: "Analyzing..."
@@ -93,9 +93,9 @@ export const EXTENSION_FILES: ExtensionFile[] = [
       replyBtn: "⚡ رد WADeal الذكي",
       badgePro: "برو غير محدود 👑",
       chips: {
-        persuasive: "⚡ إقناعي ومفصل",
-        direct: "🎯 حاسم وسريع",
-        urgent: "🔥 عرض خاص / حسم"
+        persuasive: "إقناعي",
+        direct: "حاسم",
+        urgent: "حسم فوري"
       },
       tags: {
         hot: "🔥 جاهز للشراء",
@@ -303,7 +303,8 @@ export const EXTENSION_FILES: ExtensionFile[] = [
           license_key: config.licenseKey,
           business_context: config.businessContext,
           chat_history: chatHistory,
-          last_customer_message: lastCustomerMessage
+          last_customer_message: lastCustomerMessage,
+          lang: currentLang
         })
       });
 
@@ -318,7 +319,21 @@ export const EXTENSION_FILES: ExtensionFile[] = [
 
       if (!response.ok) throw new Error(\`Server returned \${response.status}\`);
 
-      const data = await response.json();
+      let data = null;
+      try {
+        const rawText = await response.text();
+        const trimmed = rawText.trim();
+        if (!trimmed.startsWith('<') && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
+          data = JSON.parse(trimmed);
+        }
+      } catch (parseErr) {
+        console.warn('WADeal parse error:', parseErr);
+      }
+
+      if (!data || !Array.isArray(data.replies)) {
+        throw new Error('Server returned non-JSON response');
+      }
+
       currentReplies = data.replies || [];
       currentObjection = data.objection_detected || (currentLang === 'ar' ? 'استفسار واعتراض' : 'Customer Inquiry');
       renderSmartChips(currentReplies, currentObjection, data.credits_remaining, data.is_pro);
@@ -348,29 +363,33 @@ export const EXTENSION_FILES: ExtensionFile[] = [
 
     chipsContainer.innerHTML = '';
     if (objectionPill) {
-      objectionPill.textContent = '🎯 ' + objection;
-      objectionPill.style.display = 'inline-block';
+      const cleanObj = (objection || '').replace(/^[🎯👑⚠️🚚\s]+/, '').trim();
+      objectionPill.textContent = cleanObj ? '🎯 ' + cleanObj : '';
+      objectionPill.title = cleanObj;
+      objectionPill.style.display = cleanObj ? 'inline-block' : 'none';
     }
 
     replies.forEach((reply) => {
       const chip = document.createElement('button');
       const isPersuasive = reply.type === 'Persuasive';
       const isDirect = reply.type === 'Direct';
-      const isUrgent = reply.type === 'Urgent';
 
       const typeKey = isPersuasive ? 'persuasive' : isDirect ? 'direct' : 'urgent';
-      const typeLabel = isPersuasive ? t.chips.persuasive :
+      const rawTypeLabel = isPersuasive ? t.chips.persuasive :
                         isDirect ? t.chips.direct : t.chips.urgent;
+      const cleanTypeLabel = (rawTypeLabel || '').replace(/^[⚡🎯🔥\s]+/, '').trim();
+      const cleanShortLabel = (reply.short_label || '').replace(/^[⚡🎯🔥\s]+/, '').trim();
+      const chipIcon = isPersuasive ? '⚡' : isDirect ? '🎯' : '🔥';
 
       chip.className = 'wadeal-suggestion-chip ' + typeKey;
       chip.setAttribute('data-type', typeKey);
       chip.innerHTML = \`
-        <span>\${isPersuasive ? '⚡' : isDirect ? '🎯' : '🔥'}</span>
-        <strong>\${typeLabel}:</strong>
-        <span>\${reply.short_label}</span>
+        <span>\${chipIcon}</span>
+        <strong>\${cleanTypeLabel}:</strong>
+        <span>\${cleanShortLabel}</span>
         <span class="chip-preview-tooltip">
           <span class="chip-tooltip-header">
-            <span>\${typeLabel} (\${reply.short_label})</span>
+            <span>\${chipIcon} \${cleanTypeLabel} (\${cleanShortLabel})</span>
             <span class="chip-tooltip-hint">\${t.clickToInject}</span>
           </span>
           <span class="chip-tooltip-body">"\${reply.text}"</span>
@@ -386,19 +405,23 @@ export const EXTENSION_FILES: ExtensionFile[] = [
 
     const endGroup = document.getElementById('wadeal-end-group');
     if (endGroup) {
+      const langLabel = currentLang === 'en' ? 'AR' : 'EN';
+      const langTitle = currentLang === 'en' ? 'Switch to Arabic' : 'التحويل للإنجليزية';
+      const langBtnHtml = \`
+        <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="\${langTitle}">
+          <svg class="wadeal-translate-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+          <span>\${langLabel}</span>
+        </button>
+      \`;
       if (isPro) {
         endGroup.innerHTML = \`
-          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="Toggle Language">
-            \${t.langSwitch} 🌐
-          </button>
+          \${langBtnHtml}
           <span class="wadeal-pro-badge">\${t.badgePro}</span>
         \`;
       } else {
         const cred = typeof creditsRemaining === 'number' ? creditsRemaining : 40;
         endGroup.innerHTML = \`
-          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="Toggle Language">
-            \${t.langSwitch} 🌐
-          </button>
+          \${langBtnHtml}
           <button id="wadeal-credits-btn" class="wadeal-badge-credits">
             \${cred} / 40 \${currentLang === 'ar' ? 'رصيد' : 'left'}
           </button>
@@ -541,11 +564,12 @@ export const EXTENSION_FILES: ExtensionFile[] = [
             <span>ⓘ</span>
             <div class="wadeal-helper-popover">\${t.helperTooltip}</div>
           </div>
-          <span id="wadeal-objection-tag" style="display: none; font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.08); color: #8696a0;"></span>
+          <span id="wadeal-objection-tag" style="display: none; font-size: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,0.08); color: #8696a0; max-width: 140px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex-shrink: 0;"></span>
         </div>
         <div id="wadeal-end-group" class="controls-end">
-          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="Toggle Language">
-            \${t.langSwitch} 🌐
+          <button id="wadeal-lang-btn" class="wadeal-lang-switch" title="\${currentLang === 'en' ? 'Switch to Arabic' : 'التحويل للإنجليزية'}">
+            <svg class="wadeal-translate-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            <span>\${currentLang === 'en' ? 'AR' : 'EN'}</span>
           </button>
           <button id="wadeal-credits-btn" class="wadeal-badge-credits">
             40 / 40 \${isAr ? 'رصيد' : 'left'}
@@ -603,29 +627,34 @@ export const EXTENSION_FILES: ExtensionFile[] = [
 .wadeal-chips-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   overflow-x: auto;
   white-space: nowrap;
-  padding: 4px 2px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  min-height: 38px;
+  padding: 3px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  min-height: 34px;
 }
 .wadeal-chips-shelf::-webkit-scrollbar,
 .wadeal-chips-container::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+}
+.wadeal-chips-shelf::-webkit-scrollbar-thumb,
+.wadeal-chips-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
 }
 
 .wadeal-suggestion-chip,
 .wadeal-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 20px;
+  gap: 5px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 16px;
   border: 1px solid rgba(0, 168, 132, 0.4);
   background: #1f2c34;
   color: #e9edef;
@@ -701,7 +730,7 @@ export const EXTENSION_FILES: ExtensionFile[] = [
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 12px;
+  gap: 8px;
   padding: 2px 0;
 }
 
@@ -709,15 +738,16 @@ export const EXTENSION_FILES: ExtensionFile[] = [
 .wadeal-action-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .controls-end,
 .wadeal-end-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -727,16 +757,51 @@ export const EXTENSION_FILES: ExtensionFile[] = [
   margin-right: auto;
 }
 
+/* ==========================================================================
+   WADeal Trigger Button - 2-Second Laser Sweep (Right to Left)
+   ========================================================================== */
+@keyframes laser-sweep-rtl {
+  0% {
+    transform: translateX(200%) skewX(-25deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  95%, 100% {
+    transform: translateX(-220%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes laser-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0, 168, 132, 0.35), 0 0 0 1px rgba(0, 255, 163, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(0, 255, 163, 0.7), 0 0 8px rgba(37, 211, 102, 0.9), 0 0 0 1.5px rgba(0, 255, 163, 0.9);
+  }
+}
+
 .wadeal-main-trigger-btn,
 .wadeal-main-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 6px 14px;
+  min-height: 32px;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #00a884, #008069);
   color: #ffffff;
-  border: none;
-  border-radius: 18px;
+  border: 1px solid rgba(0, 255, 163, 0.4);
+  border-radius: 9999px;
   font-weight: 700;
   font-size: 12px;
   cursor: pointer;
@@ -744,12 +809,43 @@ export const EXTENSION_FILES: ExtensionFile[] = [
   box-shadow: 0 2px 6px rgba(0, 168, 132, 0.25);
   transition: all 0.15s ease;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  animation: laser-glow-pulse 2s infinite ease-in-out;
+}
+.wadeal-main-trigger-btn::after,
+.wadeal-main-btn::after {
+  content: '';
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  right: 0;
+  width: 50px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(37, 211, 102, 0.2) 20%,
+    rgba(0, 255, 163, 0.9) 45%,
+    #ffffff 50%,
+    rgba(0, 255, 163, 0.9) 55%,
+    rgba(56, 189, 248, 0.5) 80%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 8px #00ffa3) drop-shadow(0 0 16px #25d366);
+  pointer-events: none;
+  z-index: 1;
+  animation: laser-sweep-rtl 2s infinite ease-in-out;
+}
+.wadeal-main-trigger-btn > *,
+.wadeal-main-btn > * {
+  position: relative;
+  z-index: 2;
 }
 .wadeal-main-trigger-btn:hover,
 .wadeal-main-btn:hover {
   background: linear-gradient(135deg, #02b690, #009378);
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 168, 132, 0.35);
+  box-shadow: 0 3px 12px rgba(0, 255, 163, 0.45);
 }
 .wadeal-main-trigger-btn:active,
 .wadeal-main-btn:active {
@@ -767,11 +863,11 @@ export const EXTENSION_FILES: ExtensionFile[] = [
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: #8696a0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.15s ease;
 }
 .wadeal-info-icon:hover,
@@ -783,23 +879,54 @@ export const EXTENSION_FILES: ExtensionFile[] = [
 .wadeal-lang-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 2px 7px;
   background: #202c33;
-  color: #8696a0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #25d366;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 .wadeal-lang-switch:hover,
 .wadeal-lang-toggle:hover {
   background: #2a3942;
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.wadeal-translate-icon {
+  width: 12px;
+  height: 12px;
+  stroke: #25d366;
+  flex-shrink: 0;
+  transition: stroke 0.15s ease;
+}
+.wadeal-lang-switch:hover .wadeal-translate-icon,
+.wadeal-lang-toggle:hover .wadeal-translate-icon {
+  stroke: #ffffff;
+}
+
+#wadeal-objection-tag,
+.wadeal-objection-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #8696a0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .wadeal-pro-badge,

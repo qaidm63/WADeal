@@ -56,8 +56,13 @@ export const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
       });
 
       setStatusBadge(`${res.status} ${res.statusText}`);
-      const data = await res.json();
-      setResponseJson(JSON.stringify(data, null, 2));
+      const rawText = await res.text();
+      try {
+        const data = JSON.parse(rawText);
+        setResponseJson(JSON.stringify(data, null, 2));
+      } catch {
+        setResponseJson(rawText.startsWith('<') ? `[HTML Warmup / Server Starting - ${res.status}]\n${rawText.slice(0, 300)}...` : rawText);
+      }
       onRefreshCredits();
     } catch (e: any) {
       setResponseJson(JSON.stringify({ error: e.message }, null, 2));
@@ -81,8 +86,13 @@ export const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
       });
 
       setStatusBadge(`${res.status} ${res.statusText}`);
-      const data = await res.json();
-      setResponseJson(JSON.stringify(data, null, 2));
+      const rawText = await res.text();
+      try {
+        const data = JSON.parse(rawText);
+        setResponseJson(JSON.stringify(data, null, 2));
+      } catch {
+        setResponseJson(rawText.startsWith('<') ? `[HTML Warmup / Server Starting - ${res.status}]\n${rawText.slice(0, 300)}...` : rawText);
+      }
       onRefreshCredits();
     } catch (e: any) {
       setResponseJson(JSON.stringify({ error: e.message }, null, 2));
