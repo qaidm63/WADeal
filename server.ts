@@ -112,8 +112,9 @@ app.post('/api/v1/verify-license', (req, res) => {
   });
 });
 
-// Helper: Smart Dynamic Contextual Sales Intelligence Engine (Strictly grounded in Merchant Business Context)
+// Helper: Elite Psychological Sales Intelligence Engine (15+ Years Top-Tier Closer Instinct)
 interface SalesEngineResult {
+  customer_persona: 'Driver' | 'Skeptic' | 'Bargain' | 'Hesitant';
   deal_state: 'CLOSING' | 'OBJECTION' | 'DISCOVERY' | 'LOGISTICS';
   objection_detected: string;
   replies: Array<{ type: 'Persuasive' | 'Direct' | 'Urgent'; short_label: string; text: string }>;
@@ -121,20 +122,29 @@ interface SalesEngineResult {
 
 function extractBusinessParameters(merchantContext: string) {
   const ctx = merchantContext || '';
-  
-  // Extract prices (e.g. $48, 48$, 80$, $80)
+
+  // Extract prices (e.g. $48, 48$, 80$, $80, 48 ريال, 80 ريال)
   const priceMatches = [...ctx.matchAll(/(?:\$|USD|ريال|ر\.س)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:\$|USD|ريال|ر\.س)/gi)];
   const prices = priceMatches.map(m => m[1] || m[2]).filter(Boolean);
-  
-  const singlePrice = prices[0] ? `${prices[0]}$` : '48$';
-  const bundlePrice = prices[1] ? `${prices[1]}$` : '80$';
+
+  let currency = '$';
+  if (/ريال|ر\.س|SAR/i.test(ctx)) {
+    currency = 'ريال';
+  } else if (/€|EUR/i.test(ctx)) {
+    currency = '€';
+  } else if (/£|GBP/i.test(ctx)) {
+    currency = '£';
+  }
+
+  const singlePrice = prices[0] ? (currency === '$' ? `${prices[0]}$` : `${prices[0]} ${currency}`) : '48$';
+  const bundlePrice = prices[1] ? (currency === '$' ? `${prices[1]}$` : `${prices[1]} ${currency}`) : '80$';
 
   const isArabic = /[\u0600-\u06FF]/.test(ctx);
   const deliveryTerm = isArabic ? 'خلال 24–48 ساعة' : 'within 24–48 hours';
-  const warrantyTerm = isArabic ? 'ضمان استبدال 14 يوم' : '14-day replacement guarantee';
+  const warrantyTerm = isArabic ? 'ضمان استبدال رسمي لمدة 14 يوماً' : 'official 14-day replacement guarantee';
   const paymentTerm = isArabic ? 'الدفع عند الاستلام متاح' : 'Cash on delivery available';
 
-  return { singlePrice, bundlePrice, deliveryTerm, warrantyTerm, paymentTerm };
+  return { singlePrice, bundlePrice, deliveryTerm, warrantyTerm, paymentTerm, currency };
 }
 
 function buildDynamicContextualReplies(merchantContext: string, chatHistory: any[], customerMsgOverride?: string): SalesEngineResult {
@@ -151,281 +161,273 @@ function buildDynamicContextualReplies(merchantContext: string, chatHistory: any
 
   const isArabic = /[\u0600-\u06FF]/.test(lastMsg) || /[\u0600-\u06FF]/.test(merchantContext);
   const lowerMsg = lastMsg.toLowerCase();
+  const trimmedMsg = lastMsg.trim();
   const { singlePrice, bundlePrice, deliveryTerm, warrantyTerm } = extractBusinessParameters(merchantContext);
 
   // Extract location/address from message if mentioned
   let locationText = '';
-  if (/الرياض|riyadh/i.test(lastMsg)) {
-    locationText = isArabic ? 'الرياض (طريق الملك فهد)' : 'King Fahd Rd, Riyadh';
-  } else if (/جدة|jeddah/i.test(lastMsg)) {
-    locationText = isArabic ? 'جدة' : 'Jeddah';
-  } else if (/الدمام|dammam/i.test(lastMsg)) {
-    locationText = isArabic ? 'الدمام' : 'Dammam';
-  } else if (/مكة|mecca/i.test(lastMsg)) {
-    locationText = isArabic ? 'مكة المكرمة' : 'Mecca';
-  } else if (/road|street|rd|st|حي|شارع|طريق/i.test(lastMsg)) {
-    locationText = isArabic ? 'عنوانك المحدد' : 'your specified address';
+  const locationMatch = lastMsg.match(/(?:على|في|إلى|الى|بـ|ب)\s*(طريق\s+[^،\.\n]+|شارع\s+[^،\.\n]+|حي\s+[^،\.\n]+|الرياض\s*[^،\.\n]*|جدة\s*[^،\.\n]*|الدمام\s*[^،\.\n]*|مكة\s*[^،\.\n]*)/i);
+  if (locationMatch && locationMatch[1]) {
+    locationText = locationMatch[1].trim().replace(/(?:والدفع|والتوصيل|كاش|وشكرا|وشكراً).*$/i, '').trim();
+  }
+  if (!locationText) {
+    if (/الرياض/i.test(lastMsg) && /طريق الملك فهد/i.test(lastMsg)) {
+      locationText = isArabic ? 'طريق الملك فهد بالرياض' : 'King Fahd Rd in Riyadh';
+    } else if (/الرياض/i.test(lastMsg)) {
+      locationText = isArabic ? 'الرياض' : 'Riyadh';
+    } else if (/جدة/i.test(lastMsg)) {
+      locationText = isArabic ? 'جدة' : 'Jeddah';
+    } else if (/الدمام/i.test(lastMsg)) {
+      locationText = isArabic ? 'الدمام' : 'Dammam';
+    } else if (/مكة/i.test(lastMsg)) {
+      locationText = isArabic ? 'مكة المكرمة' : 'Mecca';
+    } else if (/King Fahd/i.test(lastMsg) && /Riyadh/i.test(lastMsg)) {
+      locationText = 'King Fahd Road in Riyadh';
+    } else if (/Riyadh/i.test(lastMsg)) {
+      locationText = 'Riyadh';
+    } else if (/road|street|rd|st|حي|شارع|طريق/i.test(lastMsg)) {
+      locationText = isArabic ? 'عنوانك المحدد' : 'your specified address';
+    }
   }
 
-  // 1. CONVERSATION STAGE DETECTION
-  // Check CLOSING / ORDER CONFIRMATION first (Treat the deal as WON)
-  const isClosing = (
-    /(جهز|اعتمد|أعتمد|تم |تمام|أرسل|ارسل|باخذ|بطلب|احجز|ابي حبتين|أبي حبتين|حبتين بالعرض|العنوان|الرياض|جدة|الدمام|طريق الملك فهد|شارع|الدفع عند الاستلام|كاش|توكلنا|اعتمد لي|خلاص باخذ)/i.test(lastMsg) ||
-    /(deliver to|send to|take 2|take two|order 2|order two|confirm|prepare|cash on delivery|cod|address|street|road|king fahd|riyadh|jeddah|i'll take|i will take|ready to order|go ahead|book it|ship to)/i.test(lowerMsg)
-  );
+  // 1. BUYER PERSONA PROFILING (نمط شخصية العميل)
+  let customerPersona: 'Driver' | 'Skeptic' | 'Bargain' | 'Hesitant' = 'Driver';
+  const isClippedDriver = (trimmedMsg.length <= 12 && /^(سعر\??|السعر\??|كم\??|بكم\??|متوفر\??|متاح\??|price\??|cost\??|available\??)$/i.test(trimmedMsg)) ||
+                          /^(السعر\??|كم السعر\??|بكم\??|price\??)$/i.test(trimmedMsg);
+  const isSkeptic = /(أصلي|تقليد|مقلد|اصلي|ضمان|مضمون|استرجاع|استرداد|fake|authentic|genuine|copy|guarantee|warranty|scam|حقيقي|تأكد|معاينة|افحص|أفحص)/i.test(lastMsg);
+  const isBargain = /(خصم|غالي|تنزل|تخفيض|أرخص|ارخص|آخر كم|اخر كم|كوبون|عرض خاص|تنقيص|نقص|discount|cheaper|expensive|best price|deal|offer)/i.test(lastMsg);
+  const isHesitant = /(محتار|بشوف|بفكر|أفكر|تردد|حلو بس|لسه|thinking|unsure|maybe|hesitant|deciding)/i.test(lastMsg);
 
-  if (isClosing) {
+  if (isClippedDriver) {
+    customerPersona = 'Driver';
+  } else if (isSkeptic) {
+    customerPersona = 'Skeptic';
+  } else if (isBargain) {
+    customerPersona = 'Bargain';
+  } else if (isHesitant) {
+    customerPersona = 'Hesitant';
+  }
+
+  // 2. CONVERSATION STAGE DETECTION & SUBTEXT
+  const isAskingPrice = /(كم|السعر|بكم|تكلفة|سعر|price|how much|cost|rate)/i.test(lastMsg);
+  const isAskingAuthenticity = /(أصلي|تقليد|مقلد|اصلي|original|fake|authentic|genuine|copy)/i.test(lastMsg);
+  const isAskingWarranty = /(ضمان|مضمون|استرجاع|استرداد|warranty|guarantee|refund|return)/i.test(lastMsg);
+  const isAskingSizing = /(مقاس|مقاسات|تبديل|استبدال|size|fit|sizes|exchange|swap)/i.test(lastMsg);
+  const isAskingDelivery = /(توصيل|شحن|متى يوصل|مدة التوصيل|delivery|ship|shipping|how fast|arrive)/i.test(lastMsg);
+  const isB2bInquiry = /(moq|wholesale|boxes|cartons|units|كمية|جملة|كرتون|كراتين)/i.test(lastMsg);
+
+  // Check CLOSING / ORDER CONFIRMATION first (Treat the deal as WON)
+  // Subtext: Customer asking about delivery speed or giving details has already mentally decided to buy.
+  const isConfirmedOrder = (
+    /(جهز|اعتمد|أعتمد|تم |تمام|أرسل|ارسل|باخذ|بطلب|احجز|ابي حبتين|أبي حبتين|حبتين بالعرض|طريق الملك فهد|شارع|الدفع عند الاستلام|كاش|توكلنا|اعتمد لي|خلاص باخذ|اعتمد العرض)/i.test(lastMsg) ||
+    /(deliver to|send to|take 2|take two|order 2|order two|confirm|prepare|cash on delivery|cod|king fahd|i'll take|i will take|ready to order|go ahead|book it|ship to)/i.test(lowerMsg)
+  ) && !/(كم|بكم|هل|price|how much|\?|؟)/i.test(lastMsg.replace(/الدفع عند الاستلام|كاش|طريق الملك فهد/gi, ''));
+
+  // SCENARIO A: Order Handover - Deal Won
+  // "تمام يا غالي، جهز لي حبتين بالعرض على طريق الملك فهد بالرياض والدفع عند الاستلام."
+  if (isConfirmedOrder || /(جهز لي حبتين|اعتمد لي حبتين|تمام.*جهز)/i.test(lastMsg)) {
     const stageLabel = isArabic ? 'تأكيد واعتماد الطلب (تم البيع ✅)' : 'Order Confirmation & Dispatch (Won Deal ✅)';
-    
+    const destination = locationText || (isArabic ? 'طريق الملك فهد بالرياض' : 'King Fahd Road in Riyadh');
+
     if (isArabic) {
       return {
+        customer_persona: 'Driver',
         deal_state: 'CLOSING',
         objection_detected: stageLabel,
         replies: [
           {
             type: 'Persuasive',
-            short_label: 'اعتماد فوري للطلب',
-            text: `أبشر يا غالي وعلى خشمي! تم تسجيل طلبك لبكج الحبتين بالعرض (${bundlePrice}) مع شحن سريع مجاني ${locationText ? `إلى ${locationText}` : 'لكافة المناطق'} والدفع عند الاستلام كاش. بس أرسل لي الاسم الكريم ورقم الجوال لتأكيد إرسال الشحنة مع المندوب فوراً.`
+            short_label: 'إغلاق فوري مباشر',
+            text: `أبشر بسعدك يا غالي وعلى خشمي! تم تأكيد طلبك لبكج الحبتين بالعرض (${bundlePrice}) وتجهيز الشحن إلى ${destination} مع الدفع عند الاستلام كاش. فضلاً أرسل لي رقم الجوال للتواصل لاعتماد بوليصة المندوب فوراً.`
           },
           {
             type: 'Direct',
-            short_label: 'ملخص وتأكيد الشحن',
-            text: `تم الاعتماد بنجاح! ملخص الطلب: بكج حبتين (${bundlePrice}) - الوجهة: ${locationText || 'موقعك'} - الدفع عند الاستلام مع ضمان 14 يوم. فضلاً أرسل رقم الاتصال لجدولة تسليم المندوب اليوم.`
+            short_label: 'تأكيد بدون مخاطرة',
+            text: `يا هلا والله! تم تثبيت حجز بكج الحبتين (${bundlePrice}) والتوصيل مجاني إلى ${destination} والدفع كاش عند الاستلام بعد معاينة طلبك بنفسك مع ضمان 14 يوم. ياليت تزودنا برقم الجوال لجدولة تسليم المندوب اليوم.`
           },
           {
             type: 'Urgent',
-            short_label: 'حجز رحلة شحن اليوم',
-            text: `يا هلا والله! تم حجز البكج الخاص بك وإضافته لرحلة شحن اليوم الصباحية ${locationText ? `إلى ${locationText}` : ''} بدون أي رسوم شحن. زودني برقم الجوال الحين ويطلع طلبك في الشحنة الأولى خلال ساعات!`
+            short_label: 'حجز رحلة الشحن',
+            text: `أبشر بعزك! تم حجز بكج الحبتين (${bundlePrice}) وإدراجه في رحلة شحن اليوم الصباحية المتجهة إلى ${destination} والدفع عند الاستلام. أرسل لي رقم الجوال الآن لطباعة البوليصة وخروج المندوب فوراً.`
           }
         ]
       };
     }
 
     return {
+      customer_persona: 'Driver',
       deal_state: 'CLOSING',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
-          short_label: 'Order Confirmed',
-          text: `Awesome! Your order for the 2-pack bundle special (${bundlePrice}) is officially locked in with free expedited delivery ${locationText ? `to ${locationText}` : 'to your address'} and Cash on Delivery. Please confirm the recipient's name and mobile number so we can dispatch the courier right away!`
+          short_label: 'Instant Order Lock',
+          text: `Awesome, consider it done! Your order for the 2-bottle bundle special (${bundlePrice}) is officially confirmed for ${destination} with Cash on Delivery. Please share your contact phone number so our courier can dispatch your package right away.`
         },
         {
           type: 'Direct',
-          short_label: 'Dispatch Summary',
-          text: `Order confirmed! Summary: 2-Pack Bundle (${bundlePrice}) — Destination: ${locationText || 'Your address'} — Cash on Delivery with full replacement warranty. Please share your phone number so our courier can schedule delivery today.`
+          short_label: 'Zero-Risk Dispatch',
+          text: `Locked in! 2-bottle bundle (${bundlePrice}) to ${destination} with zero upfront payment—inspect on arrival with our 14-day replacement guarantee. Could you share your mobile number to schedule today's driver?`
         },
         {
           type: 'Urgent',
           short_label: 'Priority Courier Slot',
-          text: `You got it! We've secured your 2 bundles and placed them into today's priority express courier run ${locationText ? `for ${locationText}` : ''} with waived shipping fees. Send over your contact phone number now so we can print the dispatch label right away!`
+          text: `Done! Your 2-bottle bundle (${bundlePrice}) has been added to today's priority courier dispatch to ${destination} with Cash on Delivery. Please provide your phone number now before today's dispatch cutoff.`
         }
       ]
     };
   }
 
-  // 2. Check LOGISTICS / POST-PURCHASE
-  const isLogistics = (
-    /(تتبع|وين شحنتي|وين الطلب|متى توصل|تأخر|وصلت|المندوب|رقم التتبع)/i.test(lastMsg) ||
-    /(track|tracking|where is my order|when will it arrive|delayed|status|courier|dispatch status)/i.test(lowerMsg)
-  );
+  // SCENARIO B: Skeptical Compound Inquiry (Price + Authenticity + Warranty)
+  // "كم السعر وهل المنتج أصلي مع ضمان استبدال رسمي؟"
+  if (isAskingPrice && (isAskingAuthenticity || isAskingWarranty)) {
+    const stageLabel = isArabic ? 'السعر والأصالة وضمان الاستبدال' : 'Price, Authenticity & Replacement Warranty';
 
-  if (isLogistics) {
-    const stageLabel = isArabic ? 'متابعة الشحن والتوصيل' : 'Fulfillment & Logistics Tracking';
     if (isArabic) {
       return {
-        deal_state: 'LOGISTICS',
-        objection_detected: stageLabel,
-        replies: [
-          {
-            type: 'Persuasive',
-            short_label: 'متابعة الشحنة',
-            text: `أهلاً وسهلاً بك! طلبك قيد التجهيز مع شركة الشحن والتوصيل ${deliveryTerm} حسب الموعد المحدد. فريقنا يتابع خط سير الشحنة لحظة بلحظة حتى تستلمها بيدك وتكون راضياً 100%. هل تحب أزودك برقم بوليصة الشحن الحالية؟`
-          },
-          {
-            type: 'Direct',
-            short_label: 'حالة الطلب المباشرة',
-            text: `مرحباً بك! طلبك معتمد ومسجل، ومدة الشحن ${deliveryTerm} مع إشعار بالرسائل النصية فور خروج المندوب. ما هو رقم الطلب أو رقم جوالك للتحقق الفوري من الحالة؟`
-          },
-          {
-            type: 'Urgent',
-            short_label: 'تسريع التوصيل',
-            text: `يا هلا! رفعت تنبيه لفريق التوزيع لتسريع تسليم شحنتك مع أول مندوب بالمنطقة اليوم. خلي جوالك متاح وسيتم الاتصال بك لتحديد وقت الاستلام بدقة.`
-          }
-        ]
-      };
-    }
-
-    return {
-      deal_state: 'LOGISTICS',
-      objection_detected: stageLabel,
-      replies: [
-        {
-          type: 'Persuasive',
-          short_label: 'Track & Assurance',
-          text: `Hi there! Your package is currently processed with our courier and scheduled ${deliveryTerm}. We track every shipment until it's safely in your hands. Would you like me to send your active tracking link?`
-        },
-        {
-          type: 'Direct',
-          short_label: 'Status Check',
-          text: `Hello! Your order is safely logged and moving through dispatch. You'll receive a courier SMS upon arrival. Could you share your phone number so I can pull up the live courier GPS?`
-        },
-        {
-          type: 'Urgent',
-          short_label: 'Expedite Request',
-          text: `Hey! I just flagged your package with our logistics team to give it priority courier dispatch today. Keep your phone handy for the driver's arrival call!`
-        }
-      ]
-    };
-  }
-
-  // 3. MANDATORY DIRECT-ANSWER LOGIC: Check Specific Customer Inquiry Category
-  const isAuthenticityInquiry = /(أصلي|تقليد|مقلد|اصلي|original|fake|authentic|genuine|copy)/i.test(lastMsg);
-  const isWarrantyInquiry = /(ضمان|مضمون|استرجاع|استرداد|warranty|guarantee|refund|return)/i.test(lastMsg);
-  const isSizingInquiry = /(مقاس|مقاسات|تبديل|استبدال|size|fit|sizes|exchange|swap)/i.test(lastMsg);
-  const isDeliveryInquiry = /(توصيل|شحن|متى يوصل|مدة التوصيل|delivery|ship|shipping|how fast|arrive)/i.test(lastMsg);
-  const isB2bInquiry = /(moq|wholesale|boxes|cartons|units|كمية|جملة|كرتون|كراتين)/i.test(lastMsg);
-  const isPriceInquiry = /(كم|السعر|بكم|تكلفة|سعر|خصم|غالي|تنزل|تخفيض|أرخص|price|how much|cost|rate|discount|expensive|cheaper)/i.test(lastMsg);
-
-  // A. DIRECT ANSWER: Authenticity Inquiry
-  if (isAuthenticityInquiry) {
-    const stageLabel = isArabic ? 'إثبات الأصالة والموثوقية' : 'Authenticity & Genuine Proof';
-    if (isArabic) {
-      return {
+        customer_persona: 'Skeptic',
         deal_state: 'OBJECTION',
         objection_detected: stageLabel,
         replies: [
           {
             type: 'Persuasive',
-            short_label: 'أصلي 100% ومضمون',
-            text: `نعم بكل تأكيد! جميع منتجاتنا أصلية 100% ومستوردة بزيوت نقية ومشمولة بـ (${warrantyTerm}) مع إمكانية المعاينة والدفع عند الاستلام لتطمئن تماماً. تحب نعتمد طلبك اليوم؟`
+            short_label: 'أصلي وتوفير ذكي',
+            text: `أهلاً بك يا غالي! سعر العبوة (${singlePrice}) والمنتج أصلي 100% ومستورد بجودة فاخرة مضمونة. نوفر لك ضمان استبدال رسمي لمدة 14 يوماً مع إمكانية المعاينة والدفع عند الاستلام لتطمئن تماماً. ومتاح لك عرض البكج التوفيري: حبتين بسعر (${bundlePrice}) فقط مع شحن مجاني لكافة المناطق وتوفير حقيقي. تحب نعتمد لك حبة ولا تستفيد من توفير البكج؟`
           },
           {
             type: 'Direct',
-            short_label: 'تأكيد الأصالة والدفع',
-            text: `نعم، المنتجات أصلية ومضمونة 100% مع (${warrantyTerm}) والدفع كاش عند الاستلام بعد التأكد. أرسل لي المدينة والاسم لاعتماد الحجز فوراً؟`
+            short_label: 'حسم وضمان كامل',
+            text: `يا هلا والله! الحبة بـ (${singlePrice}) وهي أصلية ومضمونة 100% بدون أدنى شك. ولا تدفع أي ريال إلا بعد ما يوصلك المندوب وتفحص العبوة بنفسك مع ضمان استبدال رسمي لمدة 14 يوم. كما نوفر عرض الحبتين بـ (${bundlePrice}) مع توصيل مجاني سريع. أين تحب نوصل لك الطلب؟`
           },
           {
             type: 'Urgent',
-            short_label: 'دفعة أصلية موثقة',
-            text: `أصلي 100% ومرفق معه شهادة ضمان ذهبية، ومتبقي كمية محدودة لرحلة شحن اليوم السريعة مجاناً. إذا أكدت طلبك الآن يخرج مع مندوب اليوم؟`
+            short_label: 'حجز الدفعة الموثقة',
+            text: `أهلاً بك! الحبة بـ (${singlePrice}) وأصلية 100% مع ضمان استبدال رسمي 14 يوماً، ومتبقي كمية محدودة لرحلة شحن اليوم بسعر العرض (${bundlePrice}) للحبتين مع شحن مجاني فوري. إذا أكدت طلبك الآن نحجز لك العرض قبل نفاذ دفعة اليوم، ما هو عنوان التوصيل؟`
           }
         ]
       };
     }
 
     return {
+      customer_persona: 'Skeptic',
       deal_state: 'OBJECTION',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
-          short_label: '100% Genuine Guaranteed',
-          text: `Yes, absolutely! All our products are 100% genuine and original, covered by our official ${warrantyTerm}. Plus, Cash on Delivery is supported so you can inspect before paying a single dollar. Shall I lock in yours today?`
+          short_label: 'Genuine & Value Bundle',
+          text: `Hello! The single bottle is ${singlePrice} and it is 100% genuine and original. It comes with our official 14-day replacement guarantee with cash on delivery so you can inspect before paying. We also have a 2-bottle bundle for just ${bundlePrice} with free shipping. Would you like a single bottle or to take advantage of the bundle savings?`
         },
         {
           type: 'Direct',
-          short_label: 'Authenticity & Terms',
-          text: `Yes, 100% authentic and genuine with our ${warrantyTerm} and cash on delivery. What delivery location should we schedule?`
+          short_label: 'Absolute Risk Reversal',
+          text: `Hi! The item is ${singlePrice} and 100% authentic, covered by a hassle-free 14-day replacement guarantee with cash on delivery. You can also get 2 bottles for ${bundlePrice} with free delivery. Where should we ship your order?`
         },
         {
           type: 'Urgent',
-          short_label: 'Certified Batch',
-          text: `100% genuine guaranteed with express courier dispatch today. If you confirm your shipping address now, we will assign it to today's priority run!`
+          short_label: 'Verified Batch Slot',
+          text: `The price is ${singlePrice} and 100% genuine with an official 14-day replacement guarantee, with only 3 units left for today's ${bundlePrice} 2-bottle bundle special with free express shipping. Can I take your address to lock it in?`
         }
       ]
     };
   }
 
-  // B. DIRECT ANSWER: Warranty / Guarantee Inquiry
-  if (isWarrantyInquiry) {
-    const stageLabel = isArabic ? 'الضمان وسياسة الاستبدال' : 'Warranty & Guarantee Assurance';
+  // SCENARIO C: Driver / Minimalist Inquiry
+  // "السعر؟" or "كم؟" or "Price?"
+  if (isClippedDriver || (isAskingPrice && trimmedMsg.length <= 10)) {
+    const stageLabel = isArabic ? 'استفسار سريع عن السعر (Driver Persona)' : 'Direct Price Inquiry (Driver Persona)';
+
     if (isArabic) {
       return {
-        deal_state: 'OBJECTION',
+        customer_persona: 'Driver',
+        deal_state: 'DISCOVERY',
         objection_detected: stageLabel,
         replies: [
           {
             type: 'Persuasive',
-            short_label: 'ضمان استبدال رسمي',
-            text: `نعم، نوفر لك (${warrantyTerm}) رسمي يضمن حقك بالكامل، والدفع متاح كاش عند الاستلام بعد المعاينة بدون أي مخاطرة. تحب نعتمد طلبك وتجربه بنفسك؟`
+            short_label: 'حسم مباشر وتوفير',
+            text: `أهلاً بك يا غالي! الحبة بـ ${singlePrice}، ومتاح عرض حبتين بـ ${bundlePrice} مع شحن مجاني ودفع عند الاستلام. تحب نعتمد لك حبة ولا تستفيد من عرض التوفير؟`
           },
           {
             type: 'Direct',
-            short_label: 'شروط الضمان المباشرة',
-            text: `نعم، يشمل (${warrantyTerm}) مع استبدال فوري عند باب بيتك والدفع عند الاستلام. ما هو العنوان والاسم لتأكيد الطلب؟`
+            short_label: 'السعر والشحن السريع',
+            text: `يا هلا والله! سعر الحبة (${singlePrice})، وبكج الحبتين بـ (${bundlePrice}) شامل الشحن السريع المجاني والدفع عند الاستلام بعد المعاينة مع ضمان استبدال 14 يوم. أرسل لي مدينتك لاعتماد الحجز فوراً؟`
           },
           {
             type: 'Urgent',
-            short_label: 'ضمان ذهبي ممتد',
-            text: `نعم، مشمول بضمان ذهبي مع شحن سريع مجاني لطلبات اليوم. إذا سجلت طلبك الآن نرسله مع أقرب رحلة شحن؟`
+            short_label: 'حجز كمية العرض',
+            text: `أهلاً بك! الحبة بـ (${singlePrice})، ومتبقي آخر كمية مخصصة لشحن اليوم بسعر العرض (${bundlePrice}) للحبتين مع شحن مجاني فوري. تحب نحجز لك العرض قبل خروج مندوب اليوم؟`
           }
         ]
       };
     }
 
     return {
-      deal_state: 'OBJECTION',
+      customer_persona: 'Driver',
+      deal_state: 'DISCOVERY',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
-          short_label: 'Official Warranty',
-          text: `Yes, you get our official ${warrantyTerm} for complete peace of mind. Cash on delivery is supported so you can inspect upon arrival. Shall I set your package aside today?`
+          short_label: 'Fast Value Pitch',
+          text: `Hello! A single bottle is ${singlePrice}, and our 2-pack bundle offer is ${bundlePrice} with free shipping and Cash on Delivery. Would you like a single bottle or to take advantage of the bundle savings?`
         },
         {
           type: 'Direct',
-          short_label: 'Warranty Terms',
-          text: `Yes, you receive our ${warrantyTerm} with courier door-to-door replacement and tracked shipping. Where should we deliver?`
+          short_label: 'Direct Figures',
+          text: `Hi! Single unit is ${singlePrice}, or get 2 for ${bundlePrice} with free shipping, cash on delivery, and our 14-day guarantee. Which city should we deliver to?`
         },
         {
           type: 'Urgent',
-          short_label: 'Protected Dispatch',
-          text: `Yes, orders placed today automatically qualify for our extended replacement warranty plus same-day courier handover. Can I get your address to lock it in?`
+          short_label: 'Batch Reservation',
+          text: `Single bottle is ${singlePrice}, but we have a few slots left for today's dispatch at ${bundlePrice} for 2 with free express shipping. Shall I lock in this bundle offer for you today?`
         }
       ]
     };
   }
 
-  // C. DIRECT ANSWER: Sizing & Exchange Inquiry
-  if (isSizingInquiry) {
-    const stageLabel = isArabic ? 'المقاس وسهولة التبديل' : 'Sizing & Exchange Friction';
+  // Category 4: Sizing / Fit Friction (Subtext: Customer has already mentally decided to buy)
+  if (isAskingSizing) {
+    const stageLabel = isArabic ? 'المقاس وتجربة الشراء المريحة' : 'Sizing & Frictionless Exchange';
+
     if (isArabic) {
       return {
+        customer_persona: 'Hesitant',
         deal_state: 'OBJECTION',
         objection_detected: stageLabel,
         replies: [
           {
             type: 'Persuasive',
             short_label: 'استبدال مجاني سلس',
-            text: `نعم وبكل سهولة! نوفر لك استبدال مقاسات مجاني تماماً خلال 14 يوم، والمندوب يبدل لك القطعة عند باب بيتك دون أي تعقيد. خذ مقاسك المعتاد وأنت مطمئن. نجهز لك المقاس المناسب الحين؟`
+            text: `أكيد وبكل سهولة ولا تشيل هم! نوفر لك استبدال مقاسات مجاني تماماً خلال 14 يوم، والمندوب يوصل لعند باب بيتك ويبدل لك القطعة دون أي تعقيد أو رسوم. خذ مقاسك المعتاد وأنت مرتاح تماماً. نعتمد لك المقاس المناسب الحين؟`
           },
           {
             type: 'Direct',
-            short_label: 'سياسة المقاسات المباشرة',
-            text: `التبديل متاح وسهل خلال 14 يوم والدفع متاح بالبطاقة أو كاش عند الاستلام. أرسل لي مقاسك ولونك المفضل لاعتماد الحجز؟`
+            short_label: 'معاينة عند الاستلام',
+            text: `التبديل مضمون 100% ومجاني عند بابك والدفع كاش عند الاستلام بعد المعاينة، يعني تجرب براحتك. أرسل لي مقاسك ولونك المفضل لاعتماد الحجز وتجهيزه فوراً.`
           },
           {
             type: 'Urgent',
             short_label: 'آخر قطع بالمستودع',
-            text: `التبديل مضمون وسهل، ومتبقي قطعتين فقط من هذا المقاس في المستودع اليوم. احجز مقاسك الآن قبل نفاذ الدفعة، ما هو عنوان التوصيل؟`
+            text: `الاستبدال مضمون ومجاني، ومتبقي قطعتين فقط من هذا المقاس في مستودع اليوم. احجز مقاسك الآن قبل نفاذه مع شحن سريع، ما هو عنوان التوصيل؟`
           }
         ]
       };
     }
 
     return {
+      customer_persona: 'Hesitant',
       deal_state: 'OBJECTION',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
-          short_label: 'Hassle-Free Exchange',
+          short_label: 'Doorstep Size Swap',
           text: `Yes, absolutely! We make size exchanges completely seamless and free within 14 days—our courier swaps it right at your door. You can order with 100% confidence. Shall I reserve your size now?`
         },
         {
           type: 'Direct',
-          short_label: 'Exchange Policy',
+          short_label: 'Zero-Risk Fit Policy',
           text: `Yes, if the size does not fit perfectly, our courier will swap it for you within 14 days. Cash on delivery is supported. What color and size should I hold?`
         },
         {
@@ -437,68 +439,284 @@ function buildDynamicContextualReplies(merchantContext: string, chatHistory: any
     };
   }
 
-  // D. DIRECT ANSWER: Delivery & Shipping Speed
-  if (isDeliveryInquiry) {
-    const stageLabel = isArabic ? 'مدة التوصيل والشحن' : 'Delivery Speed & Shipping Window';
+  // Category 5: Delivery Speed / Shipping (Subtext: Mental Buy Decision Made)
+  if (isAskingDelivery) {
+    const stageLabel = isArabic ? 'مدة التوصيل وجدولة الشحن' : 'Delivery Speed & Dispatch Scheduling';
+
     if (isArabic) {
       return {
+        customer_persona: 'Driver',
         deal_state: 'DISCOVERY',
         objection_detected: stageLabel,
         replies: [
           {
             type: 'Persuasive',
-            short_label: 'التوصيل والشحن المجاني',
-            text: `التوصيل يستغرق ${deliveryTerm} فقط لكافة المناطق، وعند طلب حبتين بالعرض (${bundlePrice}) يكون الشحن مجاني بالكامل والدفع عند الاستلام. تحب نعتمد لك الطلب اليوم؟`
+            short_label: 'توصيل فوري لباب البيت',
+            text: `أبشر بسعدك يا غالي! التوصيل سريع جداً ${deliveryTerm} فقط ومباشرة لعند باب بيتك والدفع عند الاستلام كاش. أرسل لي الحي والمدينة عشان ندرج طلبك في جدول مندوب اليوم فوراً؟`
           },
           {
             type: 'Direct',
-            short_label: 'مدة الشحن المباشرة',
-            text: `مدة التوصيل ${deliveryTerm} مع شركة الشحن المعتمدة والدفع كاش عند الاستلام متاح. ما هو موقعك للتسليم؟`
+            short_label: 'شحن مجاني ومباشر',
+            text: `التوصيل ${deliveryTerm} مع شركة شحن سريعة وبدون أي دفع مسبق—تدفع عند الاستلام بعد معاينة طلبك مع ضمان 14 يوم. ما هو العنوان ورقم الجوال لتسجيل الشحنة؟`
           },
           {
             type: 'Urgent',
-            short_label: 'حجز رحلة اليوم',
-            text: `التوصيل ${deliveryTerm}، ولدينا آخر خانات لرحلة شحن اليوم السريعة بدون رسوم توصيل. زودني بالعنوان لتخرج شحنتك اليوم فوراً.`
+            short_label: 'اللحاق بشحنة اليوم',
+            text: `التوصيل ${deliveryTerm}، وإذا أرسلت لي بياناتك الآن نلحق نسلم شحنتك لرحلة الشحن الصباحية وتوصلك بأسرع وقت بدون رسوم توصيل. ما هو عنوانك؟`
           }
         ]
       };
     }
 
     return {
+      customer_persona: 'Driver',
       deal_state: 'DISCOVERY',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
-          short_label: 'Fast Delivery & Savings',
-          text: `Delivery takes ${deliveryTerm} nationwide, and ordering our 2-pack bundle (${bundlePrice}) unlocks 100% free delivery with Cash on Delivery. Shall I schedule your dispatch today?`
+          short_label: 'Doorstep Courier Delivery',
+          text: `Delivery takes ${deliveryTerm} directly to your doorstep with Cash on Delivery supported. Which city and neighborhood should we schedule for today's courier run?`
         },
         {
           type: 'Direct',
-          short_label: 'Direct Delivery Window',
-          text: `Fulfillment window is ${deliveryTerm} with tracked courier delivery and cash on delivery supported. What is your preferred delivery address?`
+          short_label: 'Fulfillment Window',
+          text: `Fulfillment window is ${deliveryTerm} with tracked delivery and zero prepayment needed. What is the best delivery address for your package?`
         },
         {
           type: 'Urgent',
-          short_label: 'Same-Day Dispatch Run',
-          text: `Delivery is ${deliveryTerm}, and orders confirmed in the next 20 minutes go out with today's priority courier dispatch. Can I take your address details?`
+          short_label: 'Morning Dispatch Cutoff',
+          text: `Delivery is ${deliveryTerm}, and orders confirmed right now go out with today's priority courier dispatch with free shipping. Can I take your address details?`
         }
       ]
     };
   }
 
-  // E. DIRECT ANSWER: B2B Volume / MOQ Inquiry
+  // Category 6: Authenticity Alone (Skeptic)
+  if (isAskingAuthenticity) {
+    const stageLabel = isArabic ? 'إثبات الأصالة ومعاينة المندوب' : 'Authenticity Proof & Physical Inspection';
+
+    if (isArabic) {
+      return {
+        customer_persona: 'Skeptic',
+        deal_state: 'OBJECTION',
+        objection_detected: stageLabel,
+        replies: [
+          {
+            type: 'Persuasive',
+            short_label: 'أصلي 100% ومضمون',
+            text: `نعم بكل تأكيد يا غالي! المنتج أصلي 100% ومستورد بزيوت وخامات نقية ومشمول بـ (${warrantyTerm}). والأجمل أنك ما تدفع ولا ريال إلا بعد وصول المندوب ومعاينتك للمنتج بنفسك. تحب نعتمد لك طلبك وتجربه وأنت مطمئن؟`
+          },
+          {
+            type: 'Direct',
+            short_label: 'فحص قبل الدفع',
+            text: `أصلي ومضمون 100% ولا تشيل أي هم! الدفع كاش عند الاستلام بعد ما تفحص المنتج بيدك، ومعك (${warrantyTerm}) كامل للاستبدال الفوري. أرسل لي مدينتك واسمك الكريم لتجهيز الشحن فوراً.`
+          },
+          {
+            type: 'Urgent',
+            short_label: 'حجز دفعة أصلية',
+            text: `أصلي 100% مع ضمان رسمي، ومتبقي كمية محدودة من الدفعة الأصلية المخصصة للشحن السريع اليوم مع توصيل مجاني لبكج الحبتين (${bundlePrice}). تحب نلحق نحجز لك طلبك مع شحنة اليوم؟`
+          }
+        ]
+      };
+    }
+
+    return {
+      customer_persona: 'Skeptic',
+      deal_state: 'OBJECTION',
+      objection_detected: stageLabel,
+      replies: [
+        {
+          type: 'Persuasive',
+          short_label: '100% Genuine Guaranteed',
+          text: `Yes, absolutely! All our products are 100% genuine and original, covered by our official ${warrantyTerm}. Plus, Cash on Delivery is supported so you can inspect before paying a single dollar. Shall I lock in yours today?`
+        },
+        {
+          type: 'Direct',
+          short_label: 'Inspect Upon Arrival',
+          text: `Yes, 100% authentic and genuine with our ${warrantyTerm} and cash on delivery. What delivery location should we schedule?`
+        },
+        {
+          type: 'Urgent',
+          short_label: 'Certified Batch Run',
+          text: `100% genuine guaranteed with express courier dispatch today. If you confirm your shipping address now, we will assign it to today's priority run!`
+        }
+      ]
+    };
+  }
+
+  // Category 7: Warranty Alone (Skeptic)
+  if (isAskingWarranty) {
+    const stageLabel = isArabic ? 'الضمان والاستبدال الذهبي' : 'Official Warranty & Risk Reversal';
+
+    if (isArabic) {
+      return {
+        customer_persona: 'Skeptic',
+        deal_state: 'OBJECTION',
+        objection_detected: stageLabel,
+        replies: [
+          {
+            type: 'Persuasive',
+            short_label: 'ضمان استبدال رسمي',
+            text: `أكيد يا غالي! نوفر لك (${warrantyTerm}) رسمي يضمن حقك بالكامل، وإذا ما ناسبك المنتج نستبدله أو نرجعه لك فورا وبدون أي تعقيد. والدفع عند الاستلام متاح بعد المعاينة. نجهز لك الطلب وتجربه بنفسك؟`
+          },
+          {
+            type: 'Direct',
+            short_label: 'حق محفوظ 100%',
+            text: `حقك محفوظ بالكامل مع (${warrantyTerm}) واستبدال فوري عند باب بيتك عبر المندوب والدفع كاش بعد المعاينة. أين موقعك المناسب للتسليم؟`
+          },
+          {
+            type: 'Urgent',
+            short_label: 'ضمان مع شحن مجاني',
+            text: `نعم مشمول بـ (${warrantyTerm}) مع أولوية استبدال سريعة، ومتاح شحن مجاني لكافة المناطق لطلبات اليوم. أرسل لي تفاصيل عنوانك لاعتماد الحجز.`
+          }
+        ]
+      };
+    }
+
+    return {
+      customer_persona: 'Skeptic',
+      deal_state: 'OBJECTION',
+      objection_detected: stageLabel,
+      replies: [
+        {
+          type: 'Persuasive',
+          short_label: 'Official Guarantee',
+          text: `Yes, you get our official ${warrantyTerm} for complete peace of mind. Cash on delivery is supported so you can inspect upon arrival. Shall I set your package aside today?`
+        },
+        {
+          type: 'Direct',
+          short_label: 'Doorstep Warranty',
+          text: `Yes, you receive our ${warrantyTerm} with courier door-to-door replacement and tracked shipping. Where should we deliver?`
+        },
+        {
+          type: 'Urgent',
+          short_label: 'Protected Dispatch',
+          text: `Yes, orders placed today automatically qualify for our extended replacement warranty plus same-day courier handover. Can I get your address to lock it in?`
+        }
+      ]
+    };
+  }
+
+  // Category 8: Discount / Bargain / Price Objection (Value Maximizer)
+  if (isBargain) {
+    const stageLabel = isArabic ? 'معادلة التوفير وعرض البكج' : 'Bundle Math & Smart Savings';
+
+    if (isArabic) {
+      return {
+        customer_persona: 'Bargain',
+        deal_state: 'OBJECTION',
+        objection_detected: stageLabel,
+        replies: [
+          {
+            type: 'Persuasive',
+            short_label: 'معادلة التوفير الأكبر',
+            text: `أبشر بالتوفير يا غالي! وفرنا لك أفضل سعر ممكن عبر بكج الحبتين بـ (${bundlePrice}) مع شحن مجاني فوري وتوفير حقيقي، يعني وفرت رسوم الشحن وحصلت على الحبة الثانية بسعر تشجيعي مع ضمان 14 يوم. نعتمد لك عرض البكج الحين؟`
+          },
+          {
+            type: 'Direct',
+            short_label: 'توفير بدون مخاطرة',
+            text: `ولا تشيل هم التكلفة يا غالي! مع بكج الحبتين بـ (${bundlePrice}) تحصل على أعلى توفير مع الدفع عند الاستلام بعد المعاينة، وإذا ما ناسبك استرجاعك مجاني وفوري. تحب نرسله لعنوان البيت ولا العمل؟`
+          },
+          {
+            type: 'Urgent',
+            short_label: 'تثبيت سعر العرض',
+            text: `يا هلا! عرض البكج (${bundlePrice}) للحبتين مع شحن مجاني متاح اليوم فقط لآخر دفعة شحن، وبعدها يعود للسعر الفردي (${singlePrice}). نلحق نحجز لك العرض قبل انتهاء وقت الشحن؟`
+          }
+        ]
+      };
+    }
+
+    return {
+      customer_persona: 'Bargain',
+      deal_state: 'OBJECTION',
+      objection_detected: stageLabel,
+      replies: [
+        {
+          type: 'Persuasive',
+          short_label: 'Maximum Value Math',
+          text: `I've got you covered on savings! Our 2-bottle bundle gives you the best value at ${bundlePrice} with 100% free delivery, saving you courier fees and lowering the cost per bottle. Shall I lock in this bundle offer for you today?`
+        },
+        {
+          type: 'Direct',
+          short_label: 'Bundle Savings & COD',
+          text: `With the 2-bottle special for ${bundlePrice}, you get the maximum discount plus Cash on Delivery after inspecting the items. Where should we ship your package?`
+        },
+        {
+          type: 'Urgent',
+          short_label: 'Lock In Discount',
+          text: `This bundle deal (${bundlePrice} for 2 with waived shipping) is only active for today's warehouse run. Can I grab your address to guarantee your savings?`
+        }
+      ]
+    };
+  }
+
+  // Category 9: Hesitant / Relational ("محتار", "بشوف وبقولك", "لسه بفكر")
+  if (isHesitant) {
+    const stageLabel = isArabic ? 'رفع التردد وراحة القرار' : 'Empathetic Risk Removal & Hesitation Dissolution';
+
+    if (isArabic) {
+      return {
+        customer_persona: 'Hesitant',
+        deal_state: 'OBJECTION',
+        objection_detected: stageLabel,
+        replies: [
+          {
+            type: 'Persuasive',
+            short_label: 'قرار مريح ومضمون',
+            text: `حقك يا غالي ولا تشيل هم! أغلب عملائنا كان عندهم نفس التردد، لكن بعد ما جربوه وشافوا الجودة والضمان (14 يوم) اعتمدوا بكج الحبتين مباشرة. نوفر لك الدفع عند الاستلام بعد المعاينة يعني ما في أي مخاطرة عليك. تحب نرسل لك حبة تجربها ولا البكج التوفيري؟`
+          },
+          {
+            type: 'Direct',
+            short_label: 'التجربة هي الفيصل',
+            text: `ولا تخلي أي تردد يوقفك! التجربة هي الفيصل، وما تدفع ولا ريال إلا لما يوصلك المندوب وتفحص بنفسك. وإذا ما ناسبك استرجاعك فوري ومجاني. نجهزه لك لعنوان العمل ولا البيت؟`
+          },
+          {
+            type: 'Urgent',
+            short_label: 'حجز مؤقت بدون إلزام',
+            text: `يا هلا يا غالي! عشان ما يروح عليك عرض الشحن المجاني، أقدر أحجز لك الطلب مبدئياً اليوم وتأكد موعد الاستلام لما يتصل بك المندوب. ما هي مدينتك لحفظ الحجز؟`
+          }
+        ]
+      };
+    }
+
+    return {
+      customer_persona: 'Hesitant',
+      deal_state: 'OBJECTION',
+      objection_detected: stageLabel,
+      replies: [
+        {
+          type: 'Persuasive',
+          short_label: 'Empathetic Guidance',
+          text: `Completely understand! Most of our customers felt the same hesitation initially, but once they experienced the quality and 14-day warranty, they became regulars. There is zero risk since you only pay upon inspection. Would you like a single unit or the bundle?`
+        },
+        {
+          type: 'Direct',
+          short_label: 'Risk-Free Trial',
+          text: `You do not pay a penny until the courier arrives and you inspect the package yourself. If you are not completely thrilled, return it on the spot for free. Home or work delivery?`
+        },
+        {
+          type: 'Urgent',
+          short_label: 'Soft Reservation',
+          text: `To make sure you do not miss out on complimentary shipping, I can hold a reservation for you today without obligation. Which city should I place on the label?`
+        }
+      ]
+    };
+  }
+
+  // Category 10: B2B / Volume Inquiry
   if (isB2bInquiry) {
     const stageLabel = isArabic ? 'تسعير الجملة والكميات' : 'B2B Volume & MOQ Pricing';
     if (isArabic) {
       return {
+        customer_persona: 'Bargain',
         deal_state: 'OBJECTION',
         objection_detected: stageLabel,
         replies: [
           {
             type: 'Persuasive',
             short_label: 'تسعير كميات مخصص',
-            text: `أهلاً بك! الحد الأدنى 500 وحدة بسعر تشجيعي، وللكميات الأكبر من 2,000 وحدة نوفر خصم تصاعدي مع طباعة الشعار مجاناً وجودة معتمدة. تحب نجهز لك عرض سعر رسمي (فاتورة أولية) بالمواصفات؟`
+            text: `أهلاً بك! الحد الأدنى 500 وحدة بسعر تشجيعي، وللكميات الأكبر من 2,000 وحدة نوفر خصماً تصاعدياً مع طباعة الشعار مجاناً وجودة معتمدة. تحب نجهز لك عرض سعر رسمي (فاتورة أولية) بالمواصفات؟`
           },
           {
             type: 'Direct',
@@ -515,18 +733,19 @@ function buildDynamicContextualReplies(merchantContext: string, chatHistory: any
     }
 
     return {
+      customer_persona: 'Bargain',
       deal_state: 'OBJECTION',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
           short_label: 'Volume Discount',
-          text: `Hi! Our MOQ is 500 units, and volume orders above 2,000 units receive tiered rates with complimentary custom logo debossing and 5-7 business day turnaround. Shall I prepare a formal pro-forma invoice for you?`
+          text: `Hi! Our MOQ is 500 units, and volume orders above 2,000 units receive tiered rates with complimentary custom branding and turnaround. Shall I prepare a formal pro-forma invoice for you?`
         },
         {
           type: 'Direct',
           short_label: 'MOQ & Rates',
-          text: `Hello! Our standard MOQ is 500 units at unit rate, with deeper discounts unlocking at 2,000+ units (50% deposit, balance on dispatch). What exact dimensions and quantities do you need?`
+          text: `Hello! Our standard MOQ is 500 units at unit rate, with deeper discounts unlocking at 2,000+ units. What exact dimensions and quantities do you need?`
         },
         {
           type: 'Urgent',
@@ -537,100 +756,52 @@ function buildDynamicContextualReplies(merchantContext: string, chatHistory: any
     };
   }
 
-  // F. DIRECT ANSWER: Price Inquiry / Price Objection
-  if (isPriceInquiry) {
-    const stageLabel = isArabic ? 'السعر وعرض التوفير' : 'Direct Price & Bundle Value';
-    if (isArabic) {
-      return {
-        deal_state: 'DISCOVERY',
-        objection_detected: stageLabel,
-        replies: [
-          {
-            type: 'Persuasive',
-            short_label: 'السعر وعرض التوفير',
-            text: `سعر العبوة الأساسية (${singlePrice}) فقط، ونوفر لك عرض البكج التوفيري: قطعتان بسعر (${bundlePrice}) مع شحن مجاني لكافة المناطق وتوفير حقيقي مع (${warrantyTerm}). تحب نعتمد لك عرض البكج ويوصلك خلال 24–48 ساعة؟`
-          },
-          {
-            type: 'Direct',
-            short_label: 'الأسعار والتوصيل',
-            text: `سعر القطعة (${singlePrice})، وبكج القطعتين بـ (${bundlePrice}) شامل التوصيل السريع والدفع عند الاستلام متاح. أرسل لي المدينة لاعتماد الحجز فوراً؟`
-          },
-          {
-            type: 'Urgent',
-            short_label: 'حجز عرض اليوم',
-            text: `سعر القطعة (${singlePrice})، لكن لدينا آخر كمية لشحن اليوم بسعر العرض (${bundlePrice}) للحبتين مع شحن مجاني فوري. إذا أكدت طلبك الآن نحجز لك العرض فوراً. ما هو العنوان؟`
-          }
-        ]
-      };
-    }
-
-    return {
-      deal_state: 'DISCOVERY',
-      objection_detected: stageLabel,
-      replies: [
-        {
-          type: 'Persuasive',
-          short_label: 'Direct Price & Bundle',
-          text: `The price is ${singlePrice} for a single item, and our bundle special gives you 2 units for ${bundlePrice} with 100% free expedited shipping and our ${warrantyTerm} included. Shall I lock in this bundle offer for you today?`
-        },
-        {
-          type: 'Direct',
-          short_label: 'Price Comparison',
-          text: `Single unit price is ${singlePrice}, and the 2-pack bundle is ${bundlePrice} with free delivery and cash on delivery. What is your preferred delivery city?`
-        },
-        {
-          type: 'Urgent',
-          short_label: 'Today Only Incentive',
-          text: `Single unit is ${singlePrice}, but we have 3 slots left for today's same-day courier dispatch at ${bundlePrice} for 2 with waived shipping. Can I take your address to lock it in?`
-        }
-      ]
-    };
-  }
-
-  // 4. Default: DISCOVERY / INQUIRY with Direct Factual Grounding
-  const stageLabel = isArabic ? 'الاستفسار وعرض البكج' : 'Product Inquiry & Direct Answer';
+  // Default: General Discovery Inquiry with Direct Factual Grounding
+  const stageLabel = isArabic ? 'السعر وعرض البكج التوفيري' : 'Direct Price & Bundle Offer';
   if (isArabic) {
     return {
+      customer_persona: customerPersona,
       deal_state: 'DISCOVERY',
       objection_detected: stageLabel,
       replies: [
         {
           type: 'Persuasive',
-          short_label: 'السعر وعرض البكج',
-          text: `سعر القطعة (${singlePrice})، وبكج الحبتين بـ (${bundlePrice}) شامل الشحن السريع المجاني وضمان استبدال ذهبي 14 يوم. نعتمد لك البكج ويوصلك ${deliveryTerm}؟`
+          short_label: 'السعر وعرض التوفير',
+          text: `سعر العبوة الأساسية (${singlePrice}) فقط، ونوفر لك عرض البكج التوفيري: قطعتان بسعر (${bundlePrice}) مع شحن مجاني لكافة المناطق وتوفير حقيقي مع (${warrantyTerm}). تحب نعتمد لك عرض البكج ويوصلك ${deliveryTerm}؟`
         },
         {
           type: 'Direct',
-          short_label: 'الأسعار والشحن',
-          text: `السعر (${singlePrice}) للقطعة وبكج الحبتين بـ (${bundlePrice}) مع شحن مجاني والدفع عند الاستلام متاح. ما هي تفاصيل طلبك وعنوانك للتجهيز؟`
+          short_label: 'الأسعار والتوصيل',
+          text: `سعر القطعة (${singlePrice})، وبكج القطعتين بـ (${bundlePrice}) شامل التوصيل السريع والدفع عند الاستلام متاح. أرسل لي المدينة لاعتماد الحجز فوراً؟`
         },
         {
           type: 'Urgent',
-          short_label: 'حجز كمية اليوم',
-          text: `سعر العرض (${bundlePrice}) للحبتين مع شحن مجاني ساري على كمية محدودة من دفعة اليوم. إذا حجزت طلبك الآن يخرج مع أقرب موعد شحن. أين تفضل التوصيل؟`
+          short_label: 'حجز عرض اليوم',
+          text: `سعر القطعة (${singlePrice})، لكن لدينا آخر كمية لشحن اليوم بسعر العرض (${bundlePrice}) للحبتين مع شحن مجاني فوري. إذا أكدت طلبك الآن نحجز لك العرض فوراً. ما هو العنوان؟`
         }
       ]
     };
   }
 
   return {
+    customer_persona: customerPersona,
     deal_state: 'DISCOVERY',
     objection_detected: stageLabel,
     replies: [
       {
         type: 'Persuasive',
-        short_label: 'Direct Value & Bundle',
-        text: `The single item is ${singlePrice}, and our 2-unit bundle special is ${bundlePrice} with free expedited ${deliveryTerm} delivery and our ${warrantyTerm} included. Shall I lock in this bundle offer for you today?`
+        short_label: 'Direct Price & Bundle',
+        text: `The price is ${singlePrice} for a single item, and our bundle special gives you 2 units for ${bundlePrice} with 100% free expedited shipping and our ${warrantyTerm} included. Shall I lock in this bundle offer for you today?`
       },
       {
         type: 'Direct',
-        short_label: 'Fast & Clear Answer',
-        text: `Single item pricing is ${singlePrice}, or take the 2-pack bundle for ${bundlePrice} to save with free delivery. Cash on delivery is also supported. What is the best delivery address for your package?`
+        short_label: 'Price Comparison',
+        text: `Single unit price is ${singlePrice}, and the 2-pack bundle is ${bundlePrice} with free delivery and cash on delivery. What is your preferred delivery city?`
       },
       {
         type: 'Urgent',
-        short_label: 'Special Offer',
-        text: `Single price is ${singlePrice}, but we only have 3 bundles left allocated for today's dispatch at ${bundlePrice} with waived shipping fees. Can I get your delivery details to ensure it goes out today?`
+        short_label: 'Today Only Incentive',
+        text: `Single unit is ${singlePrice}, but we have 3 slots left for today's same-day courier dispatch at ${bundlePrice} for 2 with waived shipping. Can I take your address to lock it in?`
       }
     ]
   };
@@ -698,71 +869,79 @@ app.post('/api/v1/generate-deal-response', async (req, res) => {
       ? chat_history.map((m: { sender: string; text: string }) => `${m.sender}: ${m.text}`).join('\n')
       : `Customer: ${explicitCustomerInquiry}`;
 
-    const systemPrompt = `You are an elite Sales Closer representing a business on WhatsApp. Your single objective is to answer questions directly, build trust, remove hesitation, and close deals smoothly.
+    const systemPrompt = `You are the world's most intuitive and lethal Sales Closer operating inside WhatsApp for a premier merchant. You have 15+ years of experience closing multi-million dollar deals and e-commerce transactions. You do not just read words; you read human psychology, hidden hesitation, and buying momentum.
 
-[MERCHANT BUSINESS DATA]:
+[MERCHANT BUSINESS DATA & POLICIES]:
 ${merchantContext}
 
 [CHAT HISTORY]:
 ${formattedHistory}
 
-[CUSTOMER'S EXACT LATEST INQUIRY]:
+[CUSTOMER'S LATEST MESSAGE]:
 "${explicitCustomerInquiry}"
 
-### MANDATORY DIRECT-ANSWER RULE (CRITICAL REQUIREMENT):
-1. FACTUAL DIRECT ANSWER FIRST:
-   The VERY FIRST sentence of EVERY reply MUST directly, factually, and accurately answer what the customer specifically asked in their latest inquiry ("${explicitCustomerInquiry}") using the Merchant Business Data:
-   - If they ask about PRICE (e.g. "how much", "كم السعر", "price?"): The opening sentence MUST state the exact price directly (e.g., "سعر العبوة 48$..." or "The single item is $48...").
-   - If they ask about AUTHENTICITY / ORIGINAL (e.g. "is it original?", "أصلي؟", "fake?"): The opening sentence MUST confirm 100% genuine original authenticity directly.
-   - If they ask about WARRANTY / GUARANTEE (e.g. "is there warranty?", "ضمان؟"): The opening sentence MUST state the 14-day replacement guarantee terms directly.
-   - If they ask about SIZING / FIT / EXCHANGE (e.g. "size?", "exchange?", "مقاس؟"): The opening sentence MUST state the sizing guidance and 14-day replacement policy directly.
-   - If they ask about DELIVERY SPEED / SHIPPING (e.g. "how fast?", "متى يوصل؟"): The opening sentence MUST state the 24–48h delivery timeframe directly.
-   - If they confirm the order (CLOSING): STOP PITCHING. Enthusiastically confirm order items + total + destination + COD, and ask for recipient mobile number to dispatch.
-2. ONLY AFTER directly answering their question, frame the bundle deal (Buy 2 for bundle savings with free delivery) and ask a closing question.
-3. NEVER evade or ignore the customer's question. NEVER open with generic marketing fluff without answering what they specifically asked.
+### 1. THE 4-DIMENSIONAL PSYCHOLOGICAL PROFILING MATRIX:
+1. **Buyer Persona Profiling (نمط شخصية العميل):**
+   - **The Driver (العملي المستعجل):** Short, clipped words ("Price?", "السعر؟", "متوفر؟"). Dislikes small talk. Needs rapid factual certainty, bottom-line figures, and fast checkout paths.
+   - **The Skeptic (المتشكك الحذر):** Focuses on authenticity, proof, warranty, and return policies ("أصلي؟", "ايش الضمان؟", "What if it breaks?"). Needs intense risk-reversal, guarantees, and COD inspection before paying.
+   - **The Value Maximizer (المفاوض/الباحث عن التوفير):** Asks for discounts or compares bundles ("في خصم؟", "كم الآخر؟"). Needs math framing (Cost-per-unit, savings calculation) rather than cheap price cuts.
+   - **The Hesitant/Relational (المتردد الودود):** Uses soft words, hesitates, or asks open questions ("I really like it but still thinking...", "حلو بس محتار"). Needs an authoritative, empathetic recommendation that lifts the decision fatigue off their shoulders.
 
-### STEP-BY-STEP COGNITIVE WORKFLOW:
-1. Examine the customer's exact latest inquiry: "${explicitCustomerInquiry}".
-2. Classify into ONE of the 4 Conversation Stages:
-   - CLOSING: Customer agreeing, confirming quantity, providing an address, or choosing payment method.
-     STRICT RULE: STOP PITCHING! Validate receipt, confirm total + destination + COD, and ask for phone number to dispatch.
-   - OBJECTION: Customer saying price is high, hesitating, or comparing competitors.
-     Address objection factually, emphasize guarantee/ROI, present low-friction incentive, and ask closing CTA.
-   - DISCOVERY: Customer asking general questions about price, specs, warranty, or options.
-     Answer factually in sentence 1, frame bundle deal, and ask closing CTA.
-   - LOGISTICS: Customer asking about tracking or delivery status.
-     Provide immediate reassurance, courier status update, and next steps.
+2. **Subtext & Latent Buying Signals (إشارات الشراء الخفية):**
+   - When a customer asks about delivery speed, courier tracking, payment methods, or sizing, **THEY HAVE ALREADY DECIDED TO BUY MENTALLY**.
+   - *STRICT DIRECTIVE:* Stop selling the product! Never explain its benefits again. Transition immediately into the **Assumptive Close (الإغلاق الافتراضي)**: act as if the deal is done, and guide them smoothly into the fulfillment step (e.g., confirming their city, address, or phone number).
 
-3. Formulate EXACTLY 3 distinct response angles adhering strictly to the detected stage and direct answer:
-   - Chip 1 (Persuasive): Warm, value-focused or reassuring order confirmation.
-   - Chip 2 (Direct): Crisp, fast, and conclusive answers / dispatch logistics confirmation.
-   - Chip 3 (Urgent Offer / Priority Dispatch): Time-sensitive incentive or priority fulfillment dispatch guarantee.
+3. **Tone & Dialect Mirroring (المحاكاة النبرية والمحلية):**
+   - Never sound like a translated chatbot or a corporate support ticketing system.
+   - Match the regional and conversational energy of the buyer (e.g., authentic Saudi/Gulf business dialect: "أبشر بسعدك يا غالي", "ولا تشيل هم", "تم حجز طلبك", "على خشمي", or razor-sharp international commercial English).
+   - Eradicate banned robotic clichés:
+     - ❌ "يسعدني خدمتك"
+     - ❌ "نوفر لك جودة ممتازة مضمونة 100%"
+     - ❌ "هل ترغب في إتمام الطلب؟"
 
-### THE ELITE SALES CLOSER PERSONA & RULES:
-- Sound 100% Human & Local: Write in natural, warm, and professional business dialect matching the buyer (e.g., authentic Saudi business dialect: "أبشر يا غالي", "تم اعتماد طلبك", "على خشمي", "يا هلا والله", or clean international business English).
-- ZERO Template Phrasing: Strictly forbid robotic prefixes like: "نوفر لك جودة ممتازة مضمونة 100%" or identical copy-pasted ending questions. Formulate each sentence from scratch.
-- Dynamic Context Grounding: Use the Merchant Business Data strictly for real prices and policies, but formulate each sentence from scratch.
-- If deal state is CLOSING: Never re-pitch the offer or say "عند طلب حبتين ستحصل على...". The deal is already won. Validate receipt, summarize order items + total + address + COD, and ask for mobile number to dispatch.
+### 2. THE 3 PSYCHOLOGICAL CLOSING ANGLES (REQUIRED OUTPUTS):
+Every inference call must output exactly 3 differentiated psychological vectors:
+* **Vector 1: The Assumptive Closer (إغلاق الأمر الواقع المريح / Persuasive):**
+  Assumes the customer is moving forward. Focuses entirely on operational execution (e.g., "أبشر بعزك، اعتمدنا لك الحبتين بالعرض والتوصيل مجاني لعندك. ياليت تزودنا بالحي ورقم الجوال عشان نجهز لك بوليصة الشحن اليوم؟").
+* **Vector 2: The Absolute Risk Reversal (عكس المخاطرة التام / Direct):**
+  Dissolves subconscious hesitation by transferring 100% of the risk onto the merchant (e.g., "ولا تدفع ولا ريال إلا بعد ما يوصلك المندوب وتفحص المنتج بنفسك وتتأكد من جودته. وإذا ما ناسبك استرجاعك مجاني وفوري. تحب نطلبه على عنوان العمل ولا البيت؟").
+* **Vector 3: Organic Urgency & Value Hook (الإلحاح المنطقي غير المصطنع / Urgent):**
+  Uses operational realities to prompt immediate action (e.g., courier departure cut-off, reserving the last 2 units from today's warehouse batch, or securing free express shipping before same-day dispatch closes).
 
-Output MUST be valid, clean JSON with no extra markdown formatting:
+### 3. STEP-BY-STEP CLOSING COGNITION:
+1. **Analyze Subtext & Mindset:**
+   - What is the customer REALLY asking?
+   - If they are confirming, ordering, or asking about delivery/payment -> THIS IS A WON DEAL. DO NOT PITCH. Confirm the order summary (Items + Total Price + Location + COD) and request the delivery phone number/address immediately.
+   - If they ask a specific question (Price, Authenticity, Warranty) -> Answer it directly and factually in SENTENCE 1 using the Merchant Business Data, then seamlessly pivot to the closing hook.
+2. **Eliminate Fluff:**
+   - Zero generic filler phrases ("أهلاً بك عزيزي العميل", "نحن فخورون بتقديم...").
+   - Jump straight to high-value human dialogue.
+3. **Formulate 3 Specialized Tactical Angles:**
+   - Angle 1 (Persuasive / Assumptive): Confident, frictionless, assumes checkout.
+   - Angle 2 (Direct / Decisive): Crisp numbers, total clarity, immediate next step.
+   - Angle 3 (Urgent / Risk Reversal): Overcomes hesitation via inspection before payment, guarantee, or same-day dispatch cutoff.
+
+### OUTPUT FORMAT:
+You MUST return strictly valid, raw JSON without any markdown code fences (\`\`\`json or \`\`\`):
 {
-  "deal_state": "CLOSING" | "OBJECTION" | "DISCOVERY" | "LOGISTICS",
-  "objection_detected": "<Brief localized label of stage/intent, e.g. 'تأكيد واعتماد الطلب (تم البيع ✅)' or 'Order Confirmation & Dispatch (Won Deal ✅)'>",
+  "customer_persona": "Driver | Skeptic | Bargain | Hesitant",
+  "deal_state": "CLOSING | OBJECTION | DISCOVERY | LOGISTICS",
+  "objection_detected": "<Sharp, intuitive summary of customer's hidden intent/fear>",
   "replies": [
     {
       "type": "Persuasive",
-      "short_label": "<Short 2-3 word label>",
-      "text": "<Complete message text starting with direct answer>"
+      "short_label": "<2-3 words tactical title, e.g. 'إغلاق فوري مباشر'>",
+      "text": "<The complete crafted response>"
     },
     {
       "type": "Direct",
-      "short_label": "<Short 2-3 word label>",
-      "text": "<Complete message text starting with direct answer>"
+      "short_label": "<2-3 words tactical title, e.g. 'حسم وضمان كامل'>",
+      "text": "<The complete crafted response>"
     },
     {
       "type": "Urgent",
-      "short_label": "<Short 2-3 word label>",
-      "text": "<Complete message text starting with direct answer>"
+      "short_label": "<2-3 words tactical title, e.g. 'حجز رحلة الشحن'>",
+      "text": "<The complete crafted response>"
     }
   ]
 }`;
@@ -788,7 +967,7 @@ Output MUST be valid, clean JSON with no extra markdown formatting:
       }
     }
 
-    // High performance dynamic contextual generator grounded in Merchant Business Context
+    // High performance dynamic contextual generator grounded in Merchant Business Context & 4D Matrix
     if (!parsedResult || !Array.isArray(parsedResult.replies) || parsedResult.replies.length < 3) {
       parsedResult = buildDynamicContextualReplies(merchantContext, chat_history, explicitCustomerInquiry);
     }
@@ -801,6 +980,7 @@ Output MUST be valid, clean JSON with no extra markdown formatting:
 
     return res.json({
       success: true,
+      customer_persona: parsedResult.customer_persona || 'Driver',
       deal_state: parsedResult.deal_state || 'DISCOVERY',
       objection_detected: parsedResult.objection_detected || 'Inquiry & Objection',
       replies: parsedResult.replies,

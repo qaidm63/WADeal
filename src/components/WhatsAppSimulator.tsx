@@ -56,6 +56,7 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
   const [smartReplies, setSmartReplies] = useState<DealReply[]>([]);
   const [detectedObjection, setDetectedObjection] = useState<string>('');
   const [dealState, setDealState] = useState<'CLOSING' | 'OBJECTION' | 'DISCOVERY' | 'LOGISTICS'>('DISCOVERY');
+  const [customerPersona, setCustomerPersona] = useState<string>('');
   const [showQuickCustomerReply, setShowQuickCustomerReply] = useState<boolean>(true);
   // Mobile/Foldable view switch: 'chats' list or active 'chat'
   const [mobileView, setMobileView] = useState<'chats' | 'chat'>('chat');
@@ -76,6 +77,7 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
     setSmartReplies([]);
     setDetectedObjection('');
     setDealState('DISCOVERY');
+    setCustomerPersona('');
   }, [selectedContactId]);
 
   // Handle triggering WADeal AI Closing engine
@@ -129,6 +131,9 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
       const data = await res.json();
       setSmartReplies(data.replies || []);
       setDetectedObjection(data.objection_detected || (isRTL ? 'استفسار واعتراض' : 'Customer Inquiry'));
+      if (data.customer_persona) {
+        setCustomerPersona(data.customer_persona);
+      }
       
       if (data.deal_state) {
         setDealState(data.deal_state);
@@ -648,6 +653,19 @@ export const WhatsAppSimulator: React.FC<WhatsAppSimulatorProps> = ({
                     : 'bg-white/5 text-emerald-300 border border-emerald-500/20'
                 }`}>
                   {dealState === 'CLOSING' ? '👑' : dealState === 'OBJECTION' ? '⚠️' : dealState === 'LOGISTICS' ? '🚚' : '🎯'} {detectedObjection}
+                </span>
+              )}
+
+              {/* 4D Persona Profiling Badge */}
+              {customerPersona && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 whitespace-nowrap flex-shrink-0" title="Buyer Persona Profiling">
+                  <span>👤</span>
+                  <span>
+                    {customerPersona === 'Driver' ? (isRTL ? 'العملي المستعجل' : 'Driver') :
+                     customerPersona === 'Skeptic' ? (isRTL ? 'المتشكك الحذر' : 'Skeptic') :
+                     customerPersona === 'Bargain' ? (isRTL ? 'المفاوض الذكي' : 'Bargain') :
+                     (isRTL ? 'المتردد الودود' : 'Hesitant')}
+                  </span>
                 </span>
               )}
             </div>
