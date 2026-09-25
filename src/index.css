@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap');
+@import "tailwindcss";
+
+/* Bi-directional Arabic & English typography */
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Fix RTL punctuation inversion across symbols and mixed text */
+.wadeal-message-bubble,
+.wadeal-chip-text,
+.wadeal-text-block,
+.wadeal-bidi {
+  unicode-bidi: plaintext;
+}
+
+/* 1. Flexbox Action Bar & Standardized Chips (Zero Collision & Non-Breaking) */
+.wadeal-action-bar,
+.wadeal-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar for clean native feel */
+}
+.wadeal-action-bar::-webkit-scrollbar,
+.wadeal-bottom-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.wadeal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 6px 12px;
+  border-radius: 16px;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+/* Smooth custom scrollbars */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

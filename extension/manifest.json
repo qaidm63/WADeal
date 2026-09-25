@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "WADeal: AI Sales Assistant & Quick Reply for WhatsApp Web",
+  "version": "1.0.0",
+  "description": "Turn WhatsApp conversations into paid deals. Instant AI sales replies, objection handling, and quick answers grounded in your business pricing.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "http://localhost:3000/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "WADeal Settings & Business Context"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

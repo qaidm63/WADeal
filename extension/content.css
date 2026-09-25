@@ -1,0 +1,509 @@
+/* WADeal WhatsApp Web In-line Toolbar Styles (Manifest V3) */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap');
+
+#wadeal-root-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(17, 27, 33, 0.95);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: #e9edef;
+  z-index: 999;
+  transition: all 0.2s ease;
+}
+
+#wadeal-root-container[dir="rtl"] {
+  font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme="light"] #wadeal-root-container,
+.light #wadeal-root-container {
+  background: rgba(240, 242, 245, 0.96);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  color: #111b21;
+}
+
+/* 1. Two-Tier Dock Container */
+.wadeal-dock-container,
+#wadeal-root-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 12px;
+  background: rgba(17, 27, 33, 0.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: #e9edef;
+  z-index: 9999;
+  transition: all 0.2s ease;
+}
+
+#wadeal-root-container[dir="rtl"],
+.wadeal-dock-container[dir="rtl"] {
+  font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme="light"] #wadeal-root-container,
+.light #wadeal-root-container,
+[data-theme="light"] .wadeal-dock-container,
+.light .wadeal-dock-container {
+  background: rgba(240, 242, 245, 0.96);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  color: #111b21;
+}
+
+/* Tier 1: Chips Shelf (Dedicated Full-Width Row) */
+.wadeal-chips-shelf,
+.wadeal-chips-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 4px 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-height: 38px;
+}
+.wadeal-chips-shelf::-webkit-scrollbar,
+.wadeal-chips-container::-webkit-scrollbar {
+  display: none;
+}
+
+.wadeal-suggestion-chip,
+.wadeal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 168, 132, 0.4);
+  background: #1f2c34;
+  color: #e9edef;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  position: relative;
+  user-select: none;
+}
+
+.wadeal-suggestion-chip:hover,
+.wadeal-chip:hover {
+  background: #00a884;
+  color: #111b21;
+  border-color: #00a884;
+  transform: translateY(-1px);
+}
+
+/* Chip variants */
+.wadeal-suggestion-chip.persuasive,
+.wadeal-chip-persuasive {
+  background: rgba(37, 211, 102, 0.12);
+  color: #25d366;
+  border-color: rgba(37, 211, 102, 0.35);
+}
+.wadeal-suggestion-chip.persuasive:hover,
+.wadeal-chip-persuasive:hover {
+  background: #25d366;
+  color: #111b21;
+  border-color: #25d366;
+}
+
+.wadeal-suggestion-chip.direct,
+.wadeal-chip-direct {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+.wadeal-suggestion-chip.direct:hover,
+.wadeal-chip-direct:hover {
+  background: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.wadeal-suggestion-chip.urgent,
+.wadeal-chip-urgent {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.wadeal-suggestion-chip.urgent:hover,
+.wadeal-chip-urgent:hover {
+  background: #f59e0b;
+  color: #111b21;
+  border-color: #f59e0b;
+}
+
+.wadeal-empty-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #8696a0;
+  font-weight: 500;
+  padding: 4px 8px;
+  user-select: none;
+}
+
+/* Tier 2: Action & Status Controls Bar */
+.wadeal-controls-bar,
+.wadeal-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.controls-start,
+.wadeal-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.controls-end,
+.wadeal-end-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+[dir="rtl"] .controls-end,
+[dir="rtl"] .wadeal-end-group {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.wadeal-main-trigger-btn,
+.wadeal-main-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #00a884, #008069);
+  color: #ffffff;
+  border: none;
+  border-radius: 18px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 168, 132, 0.25);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.wadeal-main-trigger-btn:hover,
+.wadeal-main-btn:hover {
+  background: linear-gradient(135deg, #02b690, #009378);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 168, 132, 0.35);
+}
+.wadeal-main-trigger-btn:active,
+.wadeal-main-btn:active {
+  transform: translateY(0);
+}
+.wadeal-main-trigger-btn.loading,
+.wadeal-main-btn.loading {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.wadeal-info-icon,
+.wadeal-helper-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #8696a0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+.wadeal-info-icon:hover,
+.wadeal-helper-icon:hover {
+  color: #00a884;
+}
+
+.wadeal-lang-switch,
+.wadeal-lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #202c33;
+  color: #8696a0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.wadeal-lang-switch:hover,
+.wadeal-lang-toggle:hover {
+  background: #2a3942;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.wadeal-pro-badge,
+.wadeal-badge-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00a884;
+  background: rgba(0, 168, 132, 0.15);
+  border: 1px solid rgba(0, 168, 132, 0.35);
+  white-space: nowrap;
+}
+
+/* Tooltip Preview */
+.chip-preview-tooltip,
+.wadeal-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 320px;
+  max-width: 80vw;
+  padding: 10px 12px;
+  background: #202c33;
+  color: #e9edef;
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 10000;
+  white-space: normal;
+  text-align: left;
+}
+[dir="rtl"] .chip-preview-tooltip,
+[dir="rtl"] .wadeal-tooltip {
+  left: auto;
+  right: 0;
+  text-align: right;
+}
+
+[data-theme="light"] .chip-preview-tooltip,
+[data-theme="light"] .wadeal-tooltip,
+.light .chip-preview-tooltip,
+.light .wadeal-tooltip {
+  background: #ffffff;
+  color: #111b21;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.wadeal-suggestion-chip:hover .chip-preview-tooltip,
+.wadeal-suggestion-chip:hover .wadeal-tooltip,
+.wadeal-chip:hover .chip-preview-tooltip,
+.wadeal-chip:hover .wadeal-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.chip-tooltip-header,
+.wadeal-tooltip-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #00a884;
+}
+.chip-tooltip-hint,
+.wadeal-tooltip-hint {
+  font-size: 10px;
+  opacity: 0.7;
+  font-weight: normal;
+}
+.chip-tooltip-body {
+  display: block;
+}
+
+.wadeal-badge-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wadeal-badge-credits {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8696a0;
+  background: #202c33;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.wadeal-badge-credits:hover {
+  color: #ffffff;
+}
+
+.wadeal-lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #202c33;
+  color: #8696a0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.wadeal-lang-toggle:hover {
+  background: #2a3942;
+  color: #25d366;
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+/* Helper Tooltip Icon */
+.wadeal-helper-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8696a0;
+  cursor: pointer;
+  padding: 4px;
+  position: relative;
+}
+.wadeal-helper-icon:hover {
+  color: #00a884;
+}
+.wadeal-helper-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 240px;
+  background: #202c33;
+  color: #e9edef;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 10000;
+  white-space: normal;
+}
+[dir="rtl"] .wadeal-helper-popover {
+  left: auto;
+  right: 0;
+}
+.wadeal-helper-icon:hover .wadeal-helper-popover {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Lead Status Header Badge */
+.wadeal-header-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  position: relative;
+  z-index: 999;
+}
+[dir="rtl"] .wadeal-header-badge {
+  margin-left: 0;
+  margin-right: 12px;
+}
+.wadeal-badge-select {
+  background: #202c33;
+  color: #e9edef;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.wadeal-badge-select.status-hot {
+  border-color: #ef4444;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+.wadeal-badge-select.status-followup {
+  border-color: #f59e0b;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+}
+.wadeal-badge-select.status-won {
+  border-color: #10b981;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+/* WhatsApp Web ContentEditable Input Target & Auto-Height Wrapping */
+.wadeal-chat-input,
+div[contenteditable="true"][data-tab="10"],
+footer div[contenteditable="true"],
+.message-input-area {
+  white-space: pre-wrap !important;       /* Enable natural multi-line breaks */
+  word-break: break-word !important;      /* Prevent horizontal text cut-off */
+  overflow-y: auto !important;            /* Allow vertical scrolling if too long */
+  min-height: 42px !important;            /* Standard base height */
+  max-height: 140px !important;           /* Expand up to 4-5 lines before scrolling */
+  height: auto !important;
+  line-height: 1.5 !important;
+  font-size: 14.5px !important;
+  text-align: inherit !important;
+  direction: inherit !important;
+}
+
+/* Ensure the outer input wrapper expands smoothly */
+.wadeal-input-container {
+  display: flex !important;
+  align-items: flex-end !important;       /* Keep send and emoji icons aligned to bottom */
+  height: auto !important;
+  min-height: 52px !important;
+  padding: 6px 10px !important;
+}
+

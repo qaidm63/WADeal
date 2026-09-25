@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WADeal Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container" id="popup-root">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <span class="brand-icon">⚡</span>
+        <div>
+          <h1 class="brand-title">WADeal</h1>
+          <p class="brand-subtitle" id="txt-subtitle">AI Sales Assistant for WhatsApp Web</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="lang-toggle-btn" class="lang-btn" title="Toggle Language">🌐 عربي</button>
+        <div id="status-badge" class="badge badge-trial">40 Free Credits</div>
+      </div>
+    </header>
+
+    <!-- Business Context Engine -->
+    <section class="section">
+      <div class="section-header">
+        <label for="business-context" class="section-title" id="txt-context-title">
+          🏢 Micro-Business Context Engine
+        </label>
+        <span class="hint" id="txt-context-hint">Grounds all AI replies in your real pricing</span>
+      </div>
+      <textarea id="business-context" rows="4" placeholder="Enter your business pricing, policies, and terms..."></textarea>
+      
+      <!-- Quick Presets -->
+      <div class="presets-row">
+        <span class="preset-label" id="txt-presets-label">Quick Presets:</span>
+        <button type="button" class="preset-btn" data-preset="perfume">Perfume</button>
+        <button type="button" class="preset-btn" data-preset="tech">Gadgets</button>
+        <button type="button" class="preset-btn" data-preset="fashion">Fashion</button>
+        <button type="button" class="preset-btn" data-preset="b2b">B2B Wholesale</button>
+      </div>
+      <button id="save-context-btn" class="btn btn-secondary">💾 Save Context</button>
+    </section>
+
+    <!-- License Activation & Whop LTD -->
+    <section class="section">
+      <div class="section-header">
+        <label for="license-key" class="section-title" id="txt-license-title">
+          🔑 Pro License Key Activation
+        </label>
+        <a href="https://whop.com" target="_blank" class="buy-link" id="txt-buy-link">Get LTD ($59)</a>
+      </div>
+      <div class="license-input-group">
+        <input type="text" id="license-key" placeholder="Enter Whop key (e.g. WADEAL-LTD-LAUNCH50)">
+        <button id="activate-btn" class="btn btn-primary">Activate</button>
+      </div>
+      <div id="license-feedback" class="feedback-msg"></div>
+    </section>
+
+    <!-- Cloud Backend Settings -->
+    <section class="section collapsible">
+      <details>
+        <summary class="collapsible-trigger" id="txt-advanced-title">⚙️ Advanced Backend Connection</summary>
+        <div class="advanced-box">
+          <label for="backend-url" class="sub-label">Cloud Backend URL:</label>
+          <input type="text" id="backend-url" value="http://localhost:3000">
+          <p class="sub-hint">Set to your deployed Cloud Run URL or keep as default localhost:3000.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span id="txt-footer-trust">Zero-ban compliant • 100% Human-in-the-loop</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

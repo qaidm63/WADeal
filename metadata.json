@@ -1,0 +1,6 @@
+{
+  "name": "WADeal: AI Sales Assistant & Quick Reply for WhatsApp Web",
+  "description": "Turn WhatsApp conversations into paid deals. Instant AI sales replies, objection handling, and quick answers grounded in your business pricing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
